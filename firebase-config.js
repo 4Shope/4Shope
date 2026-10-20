@@ -1,9 +1,11 @@
-// Configure o projeto Firebase aqui. Esses identificadores do app web são públicos;
-// a segurança vem do Authentication e das regras do Firestore, não de esconder apiKey.
+
 export const firebaseConfig = {
-  apiKey: 'COLE_SUA_API_KEY',
-  authDomain: 'SEU_PROJETO.firebaseapp.com',
-  projectId: 'SEU_PROJETO',
-  appId: 'COLE_SEU_APP_ID'
+  apiKey: 'AIzaSyCEt_rDFWN2fVo7_liK83IBPV-UPY70thk',
+  authDomain: 'shope-c65c9.firebaseapp.com',
+  projectId: 'shope-c65c9',
+  storageBucket: 'shope-c65c9.firebasestorage.app',
+  messagingSenderId: '531549565696',
+  appId: '1:531549565696:web:26cb7f96cf5af1f42139e5'
 };
-export const configured = firebaseConfig.apiKey !== 'COLE_SUA_API_KEY' && firebaseConfig.projectId !== 'SEU_PROJETO';
+
+export const configured = true;
