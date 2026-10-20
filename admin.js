@@ -1,5 +1,9 @@
 
-/* Melhorias na organização dos produtos */
+/* =====================================================
+   ORGANIZADOR DE PRODUTOS - 4SHOPE
+   Mantém o cadastro, login e Firebase originais.
+===================================================== */
+
 (() => {
   const section = document.getElementById('tab-products');
   const editor = document.getElementById('productEditor');
@@ -8,42 +12,39 @@
 
   if (!section || !editor || !rows || !listCard) return;
 
-  // Coloca o formulário acima da lista de produtos.
+  // Formulário acima da lista para facilitar a edição.
   section.insertBefore(editor, listCard);
 
-  // Adiciona os controles sem alterar o HTML existente.
   const controls = document.createElement('div');
-  controls.className = 'product-manager-controls';
   controls.style.cssText =
-    'display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:16px 0';
+    'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0';
 
   controls.innerHTML = `
-    <input id="productSearch" class="field"
-      type="search" placeholder="Buscar produto pelo nome..."
-      aria-label="Buscar produtos">
+    <input class="field" id="productSearch"
+      type="search" placeholder="🔎 Buscar produto..."
+      aria-label="Buscar produto">
 
-    <select id="productCategoryFilter" class="field"
-      aria-label="Filtrar categoria">
+    <select class="field" id="productCategoryFilter">
       <option value="">Todas as categorias</option>
     </select>
 
-    <select id="productStatusFilter" class="field"
-      aria-label="Filtrar status">
-      <option value="">Todos os produtos</option>
+    <select class="field" id="productStatusFilter">
+      <option value="">Todos os status</option>
       <option value="published">Publicados</option>
       <option value="draft">Rascunhos</option>
     </select>
   `;
 
-  const tableContainer = rows.closest('table').parentElement;
+  const table = rows.closest('table');
+  const tableContainer = table.parentElement;
   listCard.insertBefore(controls, tableContainer);
 
   const pagination = document.createElement('div');
   pagination.style.cssText =
-    'display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px';
+    'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:16px';
 
   pagination.innerHTML = `
-    <span id="productPageInfo"></span>
+    <span id="productPageInfo" style="font-size:12px"></span>
     <div>
       <button type="button" class="small-btn"
         id="productPrevPage">← Anterior</button>
@@ -64,8 +65,8 @@
   const pageSize = 10;
   let page = 1;
 
-  function updateCategoryOptions() {
-    const previous = category.value;
+  function updateCategories() {
+    const selected = category.value;
 
     category.innerHTML =
       '<option value="">Todas as categorias</option>';
@@ -77,39 +78,43 @@
       category.appendChild(option);
     });
 
-    category.value = previous;
+    if ([...category.options].some(o => o.value === selected)) {
+      category.value = selected;
+    }
   }
 
   function updateList() {
     const term = search.value.trim().toLocaleLowerCase('pt-BR');
 
     const filtered = products.filter(p => {
-      const matchesName =
-        String(p.name || '').toLocaleLowerCase('pt-BR')
-          .includes(term);
+      const name = String(p.name || '')
+        .toLocaleLowerCase('pt-BR');
 
-      const productCategories = Array.isArray(p.categories)
-        ? [...p.categories, p.category]
-        : [p.category];
+      const categoryIds = [
+        ...(Array.isArray(p.categories) ? p.categories : []),
+        p.category
+      ];
 
-      const matchesCategory =
-        !category.value ||
-        productCategories.includes(category.value);
+      const matchName = name.includes(term);
 
-      const matchesStatus =
+      const matchCategory =
+        !category.value || categoryIds.includes(category.value);
+
+      const matchStatus =
         !status.value ||
         (status.value === 'published'
           ? p.published === true
           : p.published !== true);
 
-      return matchesName && matchesCategory && matchesStatus;
+      return matchName && matchCategory && matchStatus;
     });
 
     const totalPages = Math.max(
-      1, Math.ceil(filtered.length / pageSize)
+      1,
+      Math.ceil(filtered.length / pageSize)
     );
 
-    page = Math.min(page, totalPages);
+    page = Math.max(1, Math.min(page, totalPages));
 
     const visibleIds = new Set(
       filtered
@@ -118,15 +123,14 @@
     );
 
     rows.querySelectorAll('tr').forEach(tr => {
-      const button = tr.querySelector('[data-edit-p]');
+      const edit = tr.querySelector('[data-edit-p]');
 
-      if (!button) {
-        tr.style.display = filtered.length ? 'none' : '';
+      if (!edit) {
+        tr.hidden = filtered.length > 0;
         return;
       }
 
-      tr.style.display =
-        visibleIds.has(button.dataset.editP) ? '' : 'none';
+      tr.hidden = !visibleIds.has(edit.dataset.editP);
     });
 
     info.textContent =
@@ -136,29 +140,23 @@
     next.disabled = page >= totalPages;
   }
 
-  // Mantém a renderização original e aplica os filtros.
+  // Preserva a função original de renderização.
   const originalRenderProducts = renderProducts;
 
   renderProducts = function () {
     originalRenderProducts();
-    updateCategoryOptions();
+    updateCategories();
     updateList();
   };
 
-  search.addEventListener('input', () => {
+  function resetPage() {
     page = 1;
     updateList();
-  });
+  }
 
-  category.addEventListener('change', () => {
-    page = 1;
-    updateList();
-  });
-
-  status.addEventListener('change', () => {
-    page = 1;
-    updateList();
-  });
+  search.addEventListener('input', resetPage);
+  category.addEventListener('change', resetPage);
+  status.addEventListener('change', resetPage);
 
   prev.addEventListener('click', () => {
     if (page > 1) {
