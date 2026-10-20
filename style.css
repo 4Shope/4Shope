@@ -16,3 +16,23 @@
 .product-description-disclosure[open] summary span{transform:rotate(180deg)}
 .product-description-disclosure summary:focus-visible{outline:2px solid var(--ink);outline-offset:-3px}
 .product-description-disclosure .detail-description{margin:0;padding:0 18px 18px;white-space:pre-line;overflow-wrap:anywhere}
+
+/* Vitrine responsiva: marca inteira, sem sobreposição das etiquetas. */
+.hero-art{display:flex;align-items:center;justify-content:center;isolation:isolate;padding:30px 24px;min-width:0}
+.hero-mark{position:relative;top:auto;left:auto;transform:none;font-size:clamp(54px,8vw,112px);letter-spacing:-.08em;line-height:1.1;text-shadow:5px 7px 0 #343434;white-space:nowrap;z-index:1}
+.hero-mark span{position:static;font-size:.28em;letter-spacing:.015em;vertical-align:baseline;margin-left:3px}
+.hero-art .floating-tag{z-index:2;max-width:48%}
+.hero-art .tag-a{top:24px;right:15px}
+.hero-art .tag-b{bottom:24px;left:15px}
+.catalog-pager{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:15px;margin:28px 0 12px}
+.catalog-pager span{font-size:13px;color:var(--muted)}
+.catalog-pager button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:700px){
+ .hero-art{min-height:190px;padding:45px 12px}
+ .hero-mark{font-size:clamp(49px,13vw,86px);text-shadow:3px 4px 0 #343434}
+ .hero-art .floating-tag{max-width:45%;padding:7px;font-size:7px;line-height:1.35}
+ .hero-art .floating-tag b{font-size:8px}
+ .hero-art .tag-a{top:6px;right:7px;transform:rotate(3deg)}
+ .hero-art .tag-b{bottom:6px;left:7px;transform:rotate(-3deg)}
+}
+@media(max-width:360px){.hero-mark{font-size:46px}.hero-art .floating-tag{max-width:43%}}
