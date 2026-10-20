@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Substitua pelo UID da SUA conta, em Firebase Authentication > Usuários.
+    function admin() {
+      return request.auth != null && request.auth.uid == 'SUBSTITUA_PELO_SEU_UID';
+    }
+    match /products/{id} {
+      allow get, list: if admin() || resource.data.published == true;
+      allow create, update, delete: if admin();
+    }
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if admin();
+    }
+    match /settings/{id} {
+      allow read: if id == 'public';
+      allow write: if admin() && id == 'public';
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
