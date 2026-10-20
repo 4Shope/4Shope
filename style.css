@@ -55,3 +55,12 @@
  .hero-art .tag-b{bottom:7px;left:6px}
 }
 @media(max-width:360px){.hero-mark{font-size:61px}.hero-art .floating-tag{max-width:42%}}
+
+/* Correção: cada coração pertence ao seu próprio cartão, nunca ao topo da página. */
+.product-card{position:relative}
+.product-card>.heart{position:absolute;top:10px;right:10px;z-index:3}
+@media(max-width:700px){.product-card>.heart{top:7px;right:7px}}
+.footer-brand-sticker{width:112px;height:112px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 6px 12px rgba(70,220,95,.14))}
+.footer-brand-sticker-wrap{display:flex;align-items:center;gap:16px;margin:20px 0}
+.footer-brand-sticker-wrap p{margin:0;font-size:13px;line-height:1.6;max-width:280px}
+@media(max-width:700px){.footer-brand-sticker{width:88px;height:88px}.footer-brand-sticker-wrap{gap:12px}}
