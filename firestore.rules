@@ -1,27 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
- match /databases/{database}/documents {
-  function admin(){return request.auth != null && request.auth.uid == 'h8B5xEGJYSV5sBUMgfAyfPtc40j2';}
-  match /products/{id}{allow get,list: if admin() || resource.data.published == true; allow create,update,delete: if admin();}
-  match /categories/{id}{allow read: if true; allow write: if admin();}
-  match /settings/{id}{allow read: if id == 'public'; allow write: if admin() && id == 'public';}
-  match /analyticsEvents/{id}{
-    allow get,list,delete: if admin();
-    allow create: if request.resource.data.keys().hasOnly(['productId','type','createdAt'])
-      && request.resource.data.keys().hasAll(['productId','type','createdAt'])
-      && request.resource.data.productId is string
-      && request.resource.data.productId.size() > 0
-      && request.resource.data.productId.size() <= 100
-      && request.resource.data.productId.matches('^[a-zA-Z0-9_-]+
- }
-}
-)
-      && request.resource.data.type in ['view','buy']
-      && request.resource.data.createdAt is int
-      && request.resource.data.createdAt >= request.time.toMillis() - 600000
-      && request.resource.data.createdAt <= request.time.toMillis() + 600000;
-    allow update: if false;
+  match /databases/{database}/documents {
+    function admin() {
+      return request.auth != null && request.auth.uid == 'h8B5xEGJYSV5sBUMgfAyfPtc40j2';
+    }
+    match /products/{id} {
+      allow get, list: if admin() || resource.data.published == true;
+      allow create, update, delete: if admin();
+    }
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if admin();
+    }
+    match /settings/{id} {
+      allow read: if id == 'public';
+      allow write: if admin() && id == 'public';
+    }
+    match /analyticsEvents/{id} {
+      allow get, list, delete: if admin();
+      allow create: if request.resource.data.keys().hasOnly(['productId','type','createdAt'])
+        && request.resource.data.keys().hasAll(['productId','type','createdAt'])
+        && request.resource.data.productId is string
+        && request.resource.data.productId.size() > 0
+        && request.resource.data.productId.size() <= 100
+        && request.resource.data.productId.matches('^[a-zA-Z0-9_-]+$')
+        && request.resource.data.type in ['view','buy']
+        && request.resource.data.createdAt is int
+        && request.resource.data.createdAt >= request.time.toMillis() - 600000
+        && request.resource.data.createdAt <= request.time.toMillis() + 600000;
+      allow update: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
-  match /{document=**}{allow read,write: if false;}
- }
 }
