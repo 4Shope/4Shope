@@ -36,3 +36,22 @@
  .hero-art .tag-b{bottom:6px;left:7px;transform:rotate(-3deg)}
 }
 @media(max-width:360px){.hero-mark{font-size:46px}.hero-art .floating-tag{max-width:43%}}
+
+/* Assinatura 4Shope: maior, legível e sem sobreposição com as etiquetas. */
+.hero-art{padding:54px 14px;overflow:hidden}
+.hero-mark{display:flex;align-items:baseline;justify-content:center;gap:0;max-width:100%;font-family:Manrope,sans-serif;font-size:clamp(64px,7.3vw,108px);font-weight:800;line-height:1;letter-spacing:-.085em;white-space:nowrap;transform:rotate(-3deg);text-shadow:0 7px 18px rgba(0,0,0,.24);filter:drop-shadow(0 5px 0 rgba(255,255,255,.07))}
+.hero-mark .hero-four{position:static;font-size:1.2em;line-height:1;letter-spacing:-.13em;color:#fff;margin:0;text-shadow:none}
+.hero-mark .hero-word{position:static;font-size:.67em;line-height:1;letter-spacing:-.075em;color:#fff;margin:0 0 0 .05em;text-shadow:none}
+.hero-mark::after{content:'';position:absolute;bottom:-17px;left:21%;width:59%;height:4px;background:linear-gradient(90deg,transparent,#fff,transparent);border-radius:10px;opacity:.65}
+.hero-art .floating-tag{max-width:43%}
+@media(max-width:1000px){.hero-mark{font-size:clamp(62px,8vw,92px)}}
+@media(max-width:700px){
+ .hero-art{min-height:205px;padding:51px 8px}
+ .hero-mark{font-size:clamp(66px,17vw,90px);transform:rotate(-2deg)}
+ .hero-mark .hero-word{font-size:.65em}
+ .hero-mark::after{bottom:-13px;height:3px}
+ .hero-art .floating-tag{max-width:40%}
+ .hero-art .tag-a{top:7px;right:6px}
+ .hero-art .tag-b{bottom:7px;left:6px}
+}
+@media(max-width:360px){.hero-mark{font-size:61px}.hero-art .floating-tag{max-width:42%}}
