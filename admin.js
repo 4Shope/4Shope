@@ -1,3 +1,4 @@
+import {initAdminTools,renderAdminTools} from './admin-tools.js';
 import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics} from './db.js';
 import {initialSettings,currency,safeUrl,escapeHTML as esc} from './data.js';
 const $=id=>document.getElementById(id);let products=[],categories=[],settings={...initialSettings};
@@ -9,7 +10,7 @@ $('logoutBtn').onclick=()=>logout();
 function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Análises de cliques',settings:'Minha loja'})[name]||'Painel'}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));settings={...initialSettings,...(d.settings||{})};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;renderProducts();renderCategories();renderSettings();renderMarketing()}
-function renderProducts(){$('productRows').innerHTML=products.length?products.map(p=>`<tr><td><img class="table-thumb" src="${esc(safeUrl(p.images?.[0])||'product-placeholder.svg')}" onerror="this.src='product-placeholder.svg'" alt=""></td><td>${esc(p.name)}</td><td>${currency(p.price)}</td><td>${p.published?'Publicado':'Rascunho'}</td><td><button class="small-btn" data-edit-p="${esc(p.id)}">Editar</button><button class="small-btn danger" data-del-p="${esc(p.id)}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto cadastrado ainda.</td></tr>';$('pCategories').innerHTML=categories.map(c=>`<label class="checkline"><input type="checkbox" name="productCategories" value="${esc(c.id)}"> ${esc(c.name)}</label>`).join('');setupProductManager();filterProductRows()}
+function renderProducts(){$('productRows').innerHTML=products.length?products.map(p=>`<tr><td><img class="table-thumb" src="${esc(safeUrl(p.images?.[0])||'product-placeholder.svg')}" onerror="this.src='product-placeholder.svg'" alt=""></td><td>${esc(p.name)}</td><td>${currency(p.price)}</td><td>${p.published?'Publicado':'Rascunho'}</td><td><button class="small-btn" data-edit-p="${esc(p.id)}">Editar</button><button class="small-btn danger" data-del-p="${esc(p.id)}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto cadastrado ainda.</td></tr>';$('pCategories').innerHTML=categories.map(c=>`<label class="checkline"><input type="checkbox" name="productCategories" value="${esc(c.id)}"> ${esc(c.name)}</label>`).join('');renderAdminTools()}
 function editProduct(id){const p=products.find(p=>p.id===id);$('productEditor').classList.remove('hidden');$('productEditorTitle').textContent=p?'Editar produto':'Cadastrar produto';$('productForm').reset();$('pId').value=p?.id||'';$('pName').value=p?.name||'';const selected=new Set(Array.isArray(p?.categories)&&p.categories.length?p.categories:(p?.category?[p.category]:[]));$('pCategories').querySelectorAll('input[type="checkbox"]').forEach(el=>el.checked=selected.has(el.value));$('pPrice').value=p?.price??'';$('pOldPrice').value=p?.oldPrice??'';$('pVideo').value=p?.videoUrl||'';$('pDescription').value=p?.description||'';$('pImages').value=(p?.images||[]).join('\n');$('pLink').value=p?.affiliateUrl||'';$('pBadge').value=p?.badge||'';$('pFeatured').checked=!!p?.featured;$('pPublished').checked=p?p.published!==false:true;preview();$('productEditor').scrollIntoView({behavior:'smooth'})}
 $('newProduct').onclick=()=>editProduct();$('cancelProduct').onclick=()=>$('productEditor').classList.add('hidden');function preview(){const urls=$('pImages').value.split('\n').map(s=>s.trim()).filter(safeUrl).slice(0,8);$('imagePreview').innerHTML=urls.map(s=>`<img src="${esc(safeUrl(s))}" style="width:70px;height:70px;object-fit:cover;border-radius:7px" onerror="this.style.display='none'" alt="Prévia">`).join('')}$('pImages').oninput=preview;
 $('productForm').onsubmit=async e=>{e.preventDefault();const id=$('pId').value;const images=$('pImages').value.split('\n').map(s=>s.trim()).filter(Boolean);if(images.some(s=>!safeUrl(s))||!safeUrl($('pLink').value)){say('Use URLs http/https válidas nas imagens e no link de afiliado.',true);return}if($('pVideo').value.trim()&&!videoLink($('pVideo').value)){say('Link de vídeo inválido: use YouTube ou MP4 HTTPS.',true);return}const old=products.find(p=>p.id===id);const selectedCategories=[...$('pCategories').querySelectorAll('input:checked')].map(el=>el.value);if(!selectedCategories.length){say('Selecione pelo menos uma categoria.',true);return}const data={name:$('pName').value.trim(),category:selectedCategories[0],categories:selectedCategories,price:$('pPrice').value.trim()===''?null:Number($('pPrice').value),oldPrice:$('pOldPrice').value.trim()===''?null:Number($('pOldPrice').value),description:$('pDescription').value.trim(),images,videoUrl:videoLink($('pVideo').value),affiliateUrl:safeUrl($('pLink').value),badge:$('pBadge').value.trim(),featured:$('pFeatured').checked,published:$('pPublished').checked,createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};try{await saveProduct(data,id);await refresh();$('productEditor').classList.add('hidden');say('Produto salvo com sucesso.')}catch(err){console.error(err);say('Erro ao salvar. Verifique suas permissões.',true)}};
@@ -60,47 +61,5 @@ async function refreshAnalytics(){
 $('refreshAnalytics').onclick=refreshAnalytics;document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',refreshAnalytics));
 
 
-/* Busca, filtros e paginação do administrador. Não altera os dados no Firebase. */
-let productManagerPage=1;
-function setupProductManager(){
- const section=$('tab-products'),editor=$('productEditor'),rows=$('productRows'),card=rows.closest('.admin-card');
- if(!section||!editor||!card)return;
- if(!document.getElementById('productSearch')){
-  section.insertBefore(editor,card);
-  const controls=document.createElement('div');
-  controls.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0';
-  controls.innerHTML='<input id="productSearch" class="field" type="search" placeholder="Buscar produto pelo nome..." aria-label="Buscar produto"><select id="productCategoryFilter" class="field" aria-label="Filtrar categoria"><option value="">Todas as categorias</option></select><select id="productStatusFilter" class="field" aria-label="Filtrar status"><option value="">Todos os status</option><option value="published">Publicados</option><option value="draft">Rascunhos</option></select>';
-  const table=rows.closest('table'),wrapper=table.parentElement;
-  card.insertBefore(controls,wrapper);
-  const pager=document.createElement('div');
-  pager.style.cssText='display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:16px';
-  pager.innerHTML='<span id="productPageInfo" style="font-size:12px"></span><div><button id="productPrevPage" type="button" class="small-btn">← Anterior</button><button id="productNextPage" type="button" class="small-btn">Próxima →</button></div>';
-  wrapper.after(pager);
-  ['productSearch','productCategoryFilter','productStatusFilter'].forEach(id=>$(id).addEventListener(id==='productSearch'?'input':'change',()=>{productManagerPage=1;filterProductRows()}));
-  $('productPrevPage').onclick=()=>{productManagerPage=Math.max(1,productManagerPage-1);filterProductRows()};
-  $('productNextPage').onclick=()=>{productManagerPage++;filterProductRows()};
- }
- const filter=$('productCategoryFilter'),selected=filter.value;
- filter.replaceChildren(new Option('Todas as categorias',''));
- categories.forEach(c=>filter.add(new Option(c.name,c.id)));
- if([...filter.options].some(o=>o.value===selected))filter.value=selected;
-}
-function filterProductRows(){
- if(!$('productSearch'))return;
- const term=$('productSearch').value.trim().toLocaleLowerCase('pt-BR'),cat=$('productCategoryFilter').value,status=$('productStatusFilter').value;
- const filtered=products.filter(p=>{
-  const cats=[...(Array.isArray(p.categories)?p.categories:[]),p.category];
-  return String(p.name||'').toLocaleLowerCase('pt-BR').includes(term)&&(!cat||cats.includes(cat))&&(!status||(status==='published'?p.published===true:p.published!==true));
- });
- const totalPages=Math.max(1,Math.ceil(filtered.length/10));
- productManagerPage=Math.min(Math.max(1,productManagerPage),totalPages);
- const visible=new Set(filtered.slice((productManagerPage-1)*10,productManagerPage*10).map(p=>p.id));
- $('productRows').querySelectorAll('tr').forEach(tr=>{
-  const btn=tr.querySelector('[data-edit-p]');
-  tr.hidden=btn?!visible.has(btn.dataset.editP):products.length>0;
-  tr.style.display=tr.hidden?'none':'';
- });
- $('productPageInfo').textContent=filtered.length+' produto(s) · Página '+productManagerPage+' de '+totalPages;
- $('productPrevPage').disabled=productManagerPage===1;
- $('productNextPage').disabled=productManagerPage===totalPages;
-}
+
+initAdminTools({products:()=>products,categories:()=>categories,refresh,say,edit:editProduct});
