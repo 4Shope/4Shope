@@ -214,3 +214,19 @@ export async function deleteAnalytics(from,to,type){
 
   return removed;
 }
+
+/* Atualiza apenas campos escolhidos, em lotes pequenos, preservando o restante. */
+export async function updateProductsBulk(items){
+ if(!configured)throw Error('Firebase não configurado');
+ if(!Array.isArray(items)||!items.length||items.length>500)throw Error('Seleção inválida');
+ for(let start=0;start<items.length;start+=200){
+  const batch=api.writeBatch(db);
+  for(const item of items.slice(start,start+200)){
+   if(!/^[A-Za-z0-9_-]{1,128}$/.test(item.id)||!item.patch||typeof item.patch!=='object')throw Error('Produto inválido');
+   const allowed=['published','featured','category','categories','updatedAt'];
+   if(Object.keys(item.patch).some(k=>!allowed.includes(k)))throw Error('Campo não autorizado');
+   batch.update(api.doc(db,'products',item.id),item.patch);
+  }
+  await batch.commit();
+ }
+}
