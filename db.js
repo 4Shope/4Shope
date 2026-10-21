@@ -21,7 +21,9 @@ if(configured){
       orderBy,
       where,
       limit,
-      writeBatch
+      writeBatch,
+    startAfter,
+      startAfter
     },
     {
       getAuth,
@@ -131,88 +133,32 @@ export const removeCategory=(id)=>
 export const saveSettings=(data)=>
   api.setDoc(api.doc(db,'settings','public'),data);
 
-// Registrar visualizações e cliques em Comprar
+// Eventos sem IP, usuário, cookie, fingerprint ou identificador de sessão.
 export async function recordProductEvent(productId,type){
-  if(
-    !configured ||
-    !['view','buy'].includes(type) ||
-    !/^[a-zA-Z0-9_-]{1,100}$/.test(productId)
-  ){
-    return;
-  }
-
-  return api.addDoc(
-    api.collection(db,'analyticsEvents'),
-    {
-      productId,
-      type,
-      createdAt:Date.now()
-    }
-  );
+ if(!configured||!['visit','view','buy','share','ad'].includes(type)||!/^[a-zA-Z0-9_-]{1,100}$/.test(productId))return;
+ await api.addDoc(api.collection(db,'analyticsEvents'),{productId,type,createdAt:Date.now()});
 }
-
-// Consultar as análises
-export async function loadAnalytics(){
-  const snap=await api.getDocs(
-    api.query(
-      api.collection(db,'analyticsEvents'),
-      api.orderBy('createdAt','desc'),
-      api.limit(2000)
-    )
-  );
-
-  return snap.docs.map(d=>d.data());
+// Consulta limitada ao intervalo solicitado; paginação para não truncar períodos longos.
+export async function loadAnalytics(from,to){
+ const out=[];let cursor;
+ for(let page=0;page<40;page++){
+  const clauses=[api.where('createdAt','>=',from),api.where('createdAt','<=',to),api.orderBy('createdAt','desc'),api.limit(500)];
+  if(cursor)clauses.push(api.startAfter(cursor));
+  const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),...clauses));
+  out.push(...snap.docs.map(d=>({id:d.id,...d.data()})));
+  if(snap.size<500)return {events:out,truncated:false};
+  cursor=snap.docs[snap.docs.length-1];
+ }
+ return {events:out,truncated:true};
 }
-
-// Excluir registros de análises
-export async function deleteAnalytics(from,to,type){
-  let removed=0;
-
-  for(let i=0;i<1000;i++){
-    const filters=[];
-
-    if(from){
-      filters.push(
-        api.where('createdAt','>=',from)
-      );
-    }
-
-    if(to){
-      filters.push(
-        api.where('createdAt','<=',to)
-      );
-    }
-
-    if(type&&type!=='all'){
-      filters.push(
-        api.where('type','==',type)
-      );
-    }
-
-    const snap=await api.getDocs(
-      api.query(
-        api.collection(db,'analyticsEvents'),
-        ...filters,
-        api.limit(350)
-      )
-    );
-
-    if(snap.empty){
-      break;
-    }
-
-    const batch=api.writeBatch(db);
-
-    snap.docs.forEach(d=>{
-      batch.delete(d.ref);
-    });
-
-    await batch.commit();
-
-    removed+=snap.size;
-  }
-
-  return removed;
+export async function deleteAnalytics(from,to){
+ let removed=0;
+ for(let i=0;i<1000;i++){
+  const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),api.where('createdAt','>=',from),api.where('createdAt','<=',to),api.limit(350)));
+  if(snap.empty)break;
+  const batch=api.writeBatch(db);snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();removed+=snap.size;
+ }
+ return removed;
 }
 
 /* Atualiza apenas campos escolhidos, em lotes pequenos, preservando o restante. */
