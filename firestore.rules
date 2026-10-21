@@ -24,7 +24,7 @@ service cloud.firestore {
         && request.resource.data.productId.size() > 0
         && request.resource.data.productId.size() <= 100
         && request.resource.data.productId.matches('^[a-zA-Z0-9_-]+$')
-        && request.resource.data.type in ['view','buy']
+        && request.resource.data.type in ['visit','view','buy','share','ad']
         && request.resource.data.createdAt is int
         && request.resource.data.createdAt >= request.time.toMillis() - 600000
         && request.resource.data.createdAt <= request.time.toMillis() + 600000;
