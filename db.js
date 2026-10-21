@@ -22,7 +22,6 @@ if(configured){
       where,
       limit,
       writeBatch,
-    startAfter,
       startAfter
     },
     {
