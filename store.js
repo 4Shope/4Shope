@@ -14,7 +14,39 @@ function renderGrid(id,items,message='Novos produtos aparecerão em breve.'){ $(
 function categoryCard(c){return `<a class="category-card" href="#produtos" data-category="${esc(c.id)}"><span class="cat-icon">${esc(c.icon||'✦')}</span><div><strong>${esc(c.name)}</strong><span class="cat-arrow">↗</span><small>Explorar seleção</small></div></a>`}
 function render(){renderMarketing();document.documentElement.style.setProperty('--accent-custom',/^#[0-9a-fA-F]{6}$/.test(settings.accent||'')?settings.accent:'#252525');for(const [id,value] of [['heroEditableTitle',settings.heroTitle],['heroEditableText',settings.heroText],['announcementEditable',settings.announcement]]){const el=document.getElementById(id);if(el&&value)el.textContent=value}const sorted=[...products].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));renderGrid('featuredGrid',sorted.filter(p=>p.featured).slice(0,8),'Os produtos em destaque serão publicados em breve.');renderGrid('recentGrid',sorted.slice(0,4));$('homeCategories').innerHTML=categories.slice(0,4).map(categoryCard).join('');$('allCategories').innerHTML=categories.map(categoryCard).join('');$('categoryFilter').innerHTML='<option value="">Todas as categorias</option>'+categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');$('aboutText').textContent=settings.about||initialSettings.about;const instagram=safeUrl(settings.instagram);$('instagramLink').href=instagram||'#contato';$('instagramLink').textContent=instagram?'Visitar nosso Instagram ↗':'Instagram em breve';$('instagramHandle').textContent=settings.instagramHandle||'Acompanhe nossas novidades em breve';let links='';if(safeUrl(settings.whatsapp))links+=`<a class="contact-row" href="${esc(safeUrl(settings.whatsapp))}" target="_blank" rel="noopener noreferrer">WhatsApp <span>↗</span></a>`;if(settings.email&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email))links+=`<a class="contact-row" href="mailto:${esc(settings.email)}">E-mail <span>↗</span></a>`;$('contactLinks').innerHTML=links||'<div class="contact-row">Canais de atendimento em breve <span>✦</span></div>';$('customBanners').innerHTML=(settings.banners||[]).filter(b=>b.title).slice(0,2).map(b=>`<div class="mini-banner" ${safeUrl(b.image)?`style="background-image:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.25)),url('${esc(safeUrl(b.image))}')"`:''}><div><span>${esc(b.subtitle||'DESTAQUE 4SHOPE')}</span><strong>${esc(b.title)}</strong></div><a href="${esc(safeUrl(b.link)||'#produtos')}" ${safeUrl(b.link)?'target="_blank" rel="noopener noreferrer"':''} aria-label="Abrir destaque">↗</a></div>`).join('');renderCatalog();renderFavorites()}
 let catalogPage=1;const catalogPageSize=24;
-function renderCatalog(){let list=products.filter(p=>(!term||`${p.name} ${p.description||''} ${productCategoryNames(p)}`.toLocaleLowerCase('pt-BR').includes(term.toLocaleLowerCase('pt-BR')))&&(!$('categoryFilter').value||productCategoryIds(p).includes($('categoryFilter').value)));switch($('sortFilter').value){case'low':list.sort((a,b)=>(a.price==null?Infinity:a.price)-(b.price==null?Infinity:b.price));break;case'high':list.sort((a,b)=>(b.price==null?-Infinity:b.price)-(a.price==null?-Infinity:a.price));break;case'name':list.sort((a,b)=>a.name.localeCompare(b.name));break;default:list.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))}const totalPages=Math.max(1,Math.ceil(list.length/catalogPageSize));catalogPage=Math.min(Math.max(1,catalogPage),totalPages);renderGrid('catalogGrid',list.slice((catalogPage-1)*catalogPageSize,catalogPage*catalogPageSize),'Tente outra busca ou categoria.');$('resultCount').textContent=`${list.length} produto${list.length===1?'':'s'} encontrado${list.length===1?'':'s'}`;renderCatalogPager(totalPages,list.length)}
+// Busca tolerante a acentos, plural/singular, palavras fora de ordem e pequenos erros de digitação.
+function normalizeSearch(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,' ').trim()}
+function searchTokens(value){return normalizeSearch(value).split(/\s+/).filter(Boolean)}
+function closeWord(query,word){
+ if(word.includes(query)||query.includes(word)&&word.length>=3)return true;
+ const stem=w=>w.endsWith('es')&&w.length>5?w.slice(0,-2):w.endsWith('s')&&w.length>4?w.slice(0,-1):w;
+ if(stem(word).includes(stem(query))&&stem(query).length>=3)return true;
+ if(query.length<5||Math.abs(query.length-word.length)>1)return false;
+ // Uma troca, omissão ou inserção de letra.
+ let i=0,j=0,errors=0;
+ while(i<query.length&&j<word.length){
+  if(query[i]===word[j]){i++;j++;continue}
+  if(++errors>1)return false;
+  if(query.length>word.length)i++;
+  else if(word.length>query.length)j++;
+  else{i++;j++}
+ }
+ return errors+Number(i<query.length||j<word.length)<=1
+}
+function productSearchScore(p,query){
+ const wanted=searchTokens(query);
+ if(!wanted.length)return 1;
+ const name=searchTokens(p.name),category=searchTokens(productCategoryNames(p)),description=searchTokens(p.description);
+ let score=0;
+ for(const token of wanted){
+  if(name.some(w=>closeWord(token,w)))score+=8;
+  else if(category.some(w=>closeWord(token,w)))score+=4;
+  else if(description.some(w=>closeWord(token,w)))score+=1;
+  else return 0;
+ }
+ return score
+}
+function renderCatalog(){let list=products.filter(p=>(!term||productSearchScore(p,term)>0)&&(!$('categoryFilter').value||productCategoryIds(p).includes($('categoryFilter').value)));switch($('sortFilter').value){case'low':list.sort((a,b)=>(a.price==null?Infinity:a.price)-(b.price==null?Infinity:b.price));break;case'high':list.sort((a,b)=>(b.price==null?-Infinity:b.price)-(a.price==null?-Infinity:a.price));break;case'name':list.sort((a,b)=>a.name.localeCompare(b.name));break;default:list.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))}const totalPages=Math.max(1,Math.ceil(list.length/catalogPageSize));catalogPage=Math.min(Math.max(1,catalogPage),totalPages);renderGrid('catalogGrid',list.slice((catalogPage-1)*catalogPageSize,catalogPage*catalogPageSize),'Tente outra busca ou categoria.');$('resultCount').textContent=`${list.length} produto${list.length===1?'':'s'} encontrado${list.length===1?'':'s'}`;renderCatalogPager(totalPages,list.length)}
 function renderCatalogPager(totalPages,count){
  let pager=$('catalogPager');
  if(!pager){pager=document.createElement('nav');pager.id='catalogPager';pager.className='catalog-pager';pager.setAttribute('aria-label','Páginas de produtos');$('catalogGrid').after(pager)}
