@@ -66,17 +66,17 @@ async function refreshAnalytics(){
  const [from,to]=analyticsPeriod();
  try{
   const result=await loadAnalytics(from,to);lastAnalytics=result.events;
-  const counts=new Map(),totals={visit:0,view:0,buy:0,share:0,ad:0};
+  const counts=new Map(),totals={visit:0,view:0,buy:0,share:0,ad:0,adView:0};
   for(const ev of lastAnalytics){
    if(!(ev.type in totals))continue;
    totals[ev.type]++;
    if(ev.type==='visit')continue;
-   if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0,share:0,ad:0});
+   if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0,share:0,ad:0,adView:0});
    counts.get(ev.productId)[ev.type]++;
   }
-  for(const [type,id] of [['visit','metricVisits'],['view','metricViews'],['buy','metricBuys'],['share','metricShares'],['ad','metricAds']])$(id).textContent=totals[type].toLocaleString('pt-BR');
-  $('analyticsRows').innerHTML=[...counts].sort((a,b)=>(b[1].view+b[1].buy+b[1].ad)-(a[1].view+a[1].buy+a[1].ad)).map(([id,c])=>`<tr><td>${esc(products.find(p=>p.id===id)?.name||(c.ad?'Anúncio / campanha: '+id:'Produto removido: '+id))}</td><td>${c.view}</td><td>${c.ad}</td><td>${c.buy}</td><td>${c.share}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum registro neste período.</td></tr>';
-  $('analyticsHistory').innerHTML=lastAnalytics.slice(0,100).map(ev=>`<tr><td>${new Date(ev.createdAt).toLocaleString('pt-BR')}</td><td>${esc(({visit:'Visita',view:'Visualização',buy:'Comprar',share:'Compartilhar',ad:'Clique em anúncio'})[ev.type]||ev.type)}</td><td>${esc(ev.productId==='site'?'Loja':products.find(p=>p.id===ev.productId)?.name||ev.productId)}</td></tr>`).join('')||'<tr><td colspan="3">Sem atividades.</td></tr>';
+  for(const [type,id] of [['visit','metricVisits'],['view','metricViews'],['buy','metricBuys'],['share','metricShares'],['ad','metricAds'],['adView','metricAdViews']])$(id).textContent=totals[type].toLocaleString('pt-BR');
+  $('analyticsRows').innerHTML=[...counts].sort((a,b)=>(b[1].view+b[1].buy+b[1].ad)-(a[1].view+a[1].buy+a[1].ad)).map(([id,c])=>`<tr><td>${esc(products.find(p=>p.id===id)?.name||(c.ad?'Anúncio / campanha: '+id:'Produto removido: '+id))}</td><td>${c.view}</td><td>${c.adView}</td><td>${c.ad}</td><td>${c.buy}</td><td>${c.share}</td></tr>`).join('')||'<tr><td colspan="6">Nenhum registro neste período.</td></tr>';
+  $('analyticsHistory').innerHTML=lastAnalytics.slice(0,100).map(ev=>`<tr><td>${new Date(ev.createdAt).toLocaleString('pt-BR')}</td><td>${esc(({visit:'Visita',view:'Visualização',buy:'Comprar',share:'Compartilhar',ad:'Clique em anúncio',adView:'Anúncio visualizado'})[ev.type]||ev.type)}</td><td>${esc(ev.productId==='site'?'Loja':products.find(p=>p.id===ev.productId)?.name||ev.productId)}</td></tr>`).join('')||'<tr><td colspan="3">Sem atividades.</td></tr>';
   $('analyticsStatus').textContent=lastAnalytics.length+' eventos no período'+(result.truncated?' (limite de 20.000 atingido; reduza o período para consultar tudo)':'')+'. Sem identificação de visitantes. Cliques em Comprar não são vendas.';
  }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao consultar dados. Publique as novas regras do Firestore.'}
 }
