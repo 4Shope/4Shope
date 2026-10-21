@@ -1,5 +1,5 @@
 import {initAdminTools,renderAdminTools} from './admin-tools.js';
-import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics} from './db.js';
+import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,deleteAnalytics} from './db.js';
 import {initialSettings,currency,safeUrl,escapeHTML as esc} from './data.js';
 const $=id=>document.getElementById(id);let products=[],categories=[],settings={...initialSettings};
 const say=(s,error=false)=>{const el=$('adminMessage');el.textContent=s;el.style.color=error?'#c44':'#28845a';clearTimeout(window._msg);window._msg=setTimeout(()=>el.textContent='',5000)};
@@ -7,7 +7,7 @@ if(!configured){$('configNotice').classList.remove('hidden');$('loginForm').quer
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='';try{await login($('email').value,$('password').value)}catch(err){console.error('Erro de autenticação:',err);$('loginError').textContent=`Não foi possível autenticar: ${err?.code||err?.message||'erro desconhecido'}.`}};
 if(configured)onAuth(async user=>{if(!user){$('loginView').classList.remove('hidden');$('adminView').classList.add('hidden');return}$('loginError').textContent='';$('loginView').classList.add('hidden');$('adminView').classList.remove('hidden');try{await refresh()}catch(err){console.error('Autenticação OK; falha ao carregar dados do painel:',err);const code=err?.code||err?.message||'erro desconhecido';say(`Login realizado, mas não foi possível carregar os dados: ${code}. Confira as regras do Firestore.`,true);let warning=$('adminLoadError');if(!warning){warning=document.createElement('div');warning.id='adminLoadError';warning.setAttribute('role','alert');warning.style.cssText='padding:14px;margin:12px 0;border:1px solid #c44;border-radius:8px;color:#c44;white-space:normal';$('adminView').prepend(warning)}warning.textContent=`Sua conta entrou, mas a leitura do Firestore falhou (${code}). Os produtos não foram alterados. Recarregue a página para tentar novamente.`}});
 $('logoutBtn').onclick=()=>logout();
-function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Análises de cliques',settings:'Minha loja'})[name]||'Painel'}
+function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Estatísticas e visitas',settings:'Minha loja'})[name]||'Painel'}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));settings={...initialSettings,...(d.settings||{})};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;renderProducts();renderCategories();renderSettings();renderMarketing()}
 function renderProducts(){$('productRows').innerHTML=products.length?products.map(p=>`<tr><td><img class="table-thumb" src="${esc(safeUrl(p.images?.[0])||'product-placeholder.svg')}" onerror="this.src='product-placeholder.svg'" alt=""></td><td>${esc(p.name)}</td><td>${currency(p.price)}</td><td>${p.published?'Publicado':'Rascunho'}</td><td><button class="small-btn" data-edit-p="${esc(p.id)}">Editar</button><button class="small-btn danger" data-del-p="${esc(p.id)}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto cadastrado ainda.</td></tr>';$('pCategories').innerHTML=categories.map(c=>`<label class="checkline"><input type="checkbox" name="productCategories" value="${esc(c.id)}"> ${esc(c.name)}</label>`).join('');renderAdminTools()}
@@ -50,16 +50,45 @@ $('cancelBanner').onclick=()=>$('bannerEditor').classList.add('hidden');
 $('bannerForm').onsubmit=async e=>{e.preventDefault();const image=$('mBannerImage').value.trim(),mobileImage=$('mBannerMobile').value.trim(),link=$('mBannerLink').value.trim(),start=$('mBannerStart').value,end=$('mBannerEnd').value;if(!safeUrl(image)||!validMedia(mobileImage)||!validDestination(link)||(start&&end&&start>end)){say('Confira os links e as datas do banner.',true);return}const id=$('mBannerId').value||marketingId();const b={id,title:$('mBannerTitle').value.trim(),image:safeUrl(image),mobileImage:safeUrl(mobileImage),link,start,end,placement:$('mBannerPlacement').value,order:Number($('mBannerOrder').value)||0,active:$('mBannerActive').checked};try{await persistMarketing({marketingBanners:[...(settings.marketingBanners||[]).filter(x=>x.id!==id),b]});$('bannerEditor').classList.add('hidden');say('Banner salvo.')}catch(err){console.error(err);say('Não foi possível salvar o banner.',true)}};
 $('marketingBannerRows').onclick=async e=>{const edit=e.target.closest('[data-edit-banner]'),del=e.target.closest('[data-delete-banner]');if(edit)editBanner(edit.dataset.editBanner);if(del&&confirm('Excluir este banner?'))try{await persistMarketing({marketingBanners:(settings.marketingBanners||[]).filter(x=>x.id!==del.dataset.deleteBanner)});say('Banner excluído.')}catch(err){say('Erro ao excluir.',true)}};
 
+function analyticsPeriod(){
+ const now=new Date(),from=new Date(now);
+ switch($('analyticsPeriod').value){
+  case 'week':from.setDate(from.getDate()-7);break;
+  case 'month':from.setMonth(from.getMonth()-1);break;
+  case 'semester':from.setMonth(from.getMonth()-6);break;
+  case 'year':from.setFullYear(from.getFullYear()-1);break;
+ }
+ return [from.getTime(),now.getTime()];
+}
+let lastAnalytics=[];
 async function refreshAnalytics(){
- $('analyticsStatus').textContent='Carregando...';
- try{const events=await loadAnalytics(),cutoff=Date.now()-30*86400000,counts=new Map();let views=0,buys=0;
- for(const ev of events){if(!ev.createdAt||ev.createdAt<cutoff||ev.createdAt>Date.now()+3600000)continue;if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0});if(['view','buy'].includes(ev.type)){counts.get(ev.productId)[ev.type]++;if(ev.type==='view')views++;else buys++}}
- $('metricViews').textContent=views.toLocaleString('pt-BR');$('metricBuys').textContent=buys.toLocaleString('pt-BR');$('metricRate').textContent=views?(100*buys/views).toFixed(1).replace('.',',')+'%':'—';
- $('analyticsRows').innerHTML=[...counts].sort((a,b)=>b[1].buy-a[1].buy).map(([id,c])=>`<tr><td>${esc(products.find(p=>p.id===id)?.name||'Produto removido')}</td><td>${c.view}</td><td>${c.buy}</td><td>${c.view?(100*c.buy/c.view).toFixed(1).replace('.',',')+'%':'—'}</td></tr>`).join('')||'<tr><td colspan="4">Nenhum registro no período.</td></tr>';
- $('analyticsStatus').textContent='Até os 2.000 eventos mais recentes. Cliques não representam compras.';
- }catch(e){console.error(e);$('analyticsStatus').textContent='Não foi possível carregar. Confira as regras do Firestore.'}}
-$('refreshAnalytics').onclick=refreshAnalytics;document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',refreshAnalytics));
-
-
+ $('analyticsStatus').textContent='Carregando estatísticas...';
+ const [from,to]=analyticsPeriod();
+ try{
+  const result=await loadAnalytics(from,to);lastAnalytics=result.events;
+  const counts=new Map(),totals={visit:0,view:0,buy:0,share:0,ad:0};
+  for(const ev of lastAnalytics){
+   if(!(ev.type in totals))continue;
+   totals[ev.type]++;
+   if(ev.type==='visit')continue;
+   if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0,share:0,ad:0});
+   counts.get(ev.productId)[ev.type]++;
+  }
+  for(const [type,id] of [['visit','metricVisits'],['view','metricViews'],['buy','metricBuys'],['share','metricShares'],['ad','metricAds']])$(id).textContent=totals[type].toLocaleString('pt-BR');
+  $('analyticsRows').innerHTML=[...counts].sort((a,b)=>(b[1].view+b[1].buy+b[1].ad)-(a[1].view+a[1].buy+a[1].ad)).map(([id,c])=>`<tr><td>${esc(products.find(p=>p.id===id)?.name||(c.ad?'Anúncio / campanha: '+id:'Produto removido: '+id))}</td><td>${c.view}</td><td>${c.ad}</td><td>${c.buy}</td><td>${c.share}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum registro neste período.</td></tr>';
+  $('analyticsHistory').innerHTML=lastAnalytics.slice(0,100).map(ev=>`<tr><td>${new Date(ev.createdAt).toLocaleString('pt-BR')}</td><td>${esc(({visit:'Visita',view:'Visualização',buy:'Comprar',share:'Compartilhar',ad:'Clique em anúncio'})[ev.type]||ev.type)}</td><td>${esc(ev.productId==='site'?'Loja':products.find(p=>p.id===ev.productId)?.name||ev.productId)}</td></tr>`).join('')||'<tr><td colspan="3">Sem atividades.</td></tr>';
+  $('analyticsStatus').textContent=lastAnalytics.length+' eventos no período'+(result.truncated?' (limite de 20.000 atingido; reduza o período para consultar tudo)':'')+'. Sem identificação de visitantes. Cliques em Comprar não são vendas.';
+ }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao consultar dados. Publique as novas regras do Firestore.'}
+}
+$('refreshAnalytics').onclick=refreshAnalytics;
+$('analyticsPeriod').onchange=refreshAnalytics;
+$('deleteAnalytics').onclick=async()=>{
+ const [from,to]=analyticsPeriod(),period=$('analyticsPeriod').selectedOptions[0].textContent;
+ if(!confirm('Excluir DEFINITIVAMENTE todos os eventos de '+period+'? Esta ação não pode ser desfeita.'))return;
+ if(!confirm('Confirmar a exclusão permanente deste período?'))return;
+ $('analyticsStatus').textContent='Excluindo eventos...';
+ try{const count=await deleteAnalytics(from,to);say(count+' eventos excluídos.');await refreshAnalytics()}catch(e){console.error(e);say('Erro ao excluir eventos: '+(e.code||e.message),true)}
+};
+document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',refreshAnalytics));
 
 initAdminTools({products:()=>products,categories:()=>categories,refresh,say,edit:editProduct});
