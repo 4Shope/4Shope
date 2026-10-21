@@ -64,3 +64,7 @@
 .footer-brand-sticker-wrap{display:flex;align-items:center;gap:16px;margin:20px 0}
 .footer-brand-sticker-wrap p{margin:0;font-size:13px;line-height:1.6;max-width:280px}
 @media(max-width:700px){.footer-brand-sticker{width:88px;height:88px}.footer-brand-sticker-wrap{gap:12px}}
+
+/* Evita ampliar a miniatura incorporada na logo atual, o que causa desfoque. */
+.footer-brand-sticker{width:72px;height:72px;image-rendering:auto;filter:none}
+@media(max-width:700px){.footer-brand-sticker{width:72px;height:72px}}
