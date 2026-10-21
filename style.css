@@ -86,3 +86,10 @@
 .admin-table th:first-child,.admin-table td:first-child{width:38px;text-align:center}
 @media(max-width:1050px){.product-tool-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.product-tool-filters #productSearch{grid-column:1/-1}}
 @media(max-width:600px){.product-tool-filters{grid-template-columns:1fr 1fr}.product-tool-actions{align-items:stretch}.product-tool-actions .small-btn{font-size:11px}.product-tool-actions .field{flex:1;min-width:125px}.product-tool-pager{justify-content:center;text-align:center}}
+
+/* Proteção visual de imagens públicas e compartilhamento de produtos. */
+body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none }
+.product-media,.detail-photo,.detail-thumbs,.mini-banner,.campaign-cover,.marketing-banner,.footer-brand-sticker-wrap{-webkit-touch-callout:none}
+.product-share{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:9px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s}
+.product-share:hover{background:var(--soft)}
+.detail-actions [data-share-product]{border:1px solid var(--line);color:var(--ink);background:transparent}
