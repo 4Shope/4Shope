@@ -68,3 +68,21 @@
 /* Evita ampliar a miniatura incorporada na logo atual, o que causa desfoque. */
 .footer-brand-sticker{width:72px;height:72px;image-rendering:auto;filter:none}
 @media(max-width:700px){.footer-brand-sticker{width:72px;height:72px}}
+
+/* Ferramentas do administrador: responsivas e isoladas da vitrine. */
+.product-tools{display:grid;gap:12px;margin:18px 0 16px}
+.product-tool-filters{display:grid;grid-template-columns:minmax(180px,2fr) repeat(4,minmax(115px,1fr));gap:9px}
+.product-tool-filters .field,.product-tool-actions .field{min-width:0;width:100%;max-width:100%}
+.product-tool-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.product-tool-actions .field{width:auto;min-width:160px;max-width:250px}
+.product-tool-actions .small-btn{white-space:normal;text-align:center}
+.product-tool-actions label.small-btn{cursor:pointer}
+.product-tool-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}
+.product-tool-pager span,#selectionCount{font-size:12px;color:var(--muted)}
+.product-tool-report{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--soft);font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.product-tool-report details{margin-top:10px}
+.product-link-results{max-height:350px;overflow:auto;display:grid;gap:8px;margin-top:12px}
+.product-link-results>div{border-bottom:1px solid var(--line);padding-bottom:7px}
+.admin-table th:first-child,.admin-table td:first-child{width:38px;text-align:center}
+@media(max-width:1050px){.product-tool-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.product-tool-filters #productSearch{grid-column:1/-1}}
+@media(max-width:600px){.product-tool-filters{grid-template-columns:1fr 1fr}.product-tool-actions{align-items:stretch}.product-tool-actions .small-btn{font-size:11px}.product-tool-actions .field{flex:1;min-width:125px}.product-tool-pager{justify-content:center;text-align:center}}
