@@ -80,7 +80,9 @@ function analyticsPeriod(){
  }
  return [from.getTime(),now.getTime()];
 }
-let lastAnalytics=[];
+let lastAnalytics=[];let rankingCache={view:[],buy:[]};
+function rankingList(type){return rankingCache[type].slice(0,10).map((item,i)=>`<div class="rank-row"><span class="rank-number">${i+1}</span><span>${esc(products.find(p=>p.id===item.id)?.name||'Produto indisponível')}</span><strong>${item.count}</strong></div>`).join('')||'<p class="admin-hint">Sem dados neste período.</p>'}
+$('publishPopular').onclick=async()=>{if(!rankingCache.view.length&&!rankingCache.buy.length){say('Atualize as estatísticas antes de publicar.',true);return}if(!confirm('Atualizar a vitrine Em alta com os rankings deste período?'))return;try{await saveSettings({...settings,popularSnapshot:{view:rankingCache.view.slice(0,8).map(x=>x.id),buy:rankingCache.buy.slice(0,8).map(x=>x.id),updatedAt:Date.now()}});await refresh();$('popularPublishStatus').textContent='Ranking publicado na loja.';say('Ranking publicado com sucesso.')}catch(e){console.error(e);say('Não foi possível publicar o ranking.',true)}};
 async function refreshAnalytics(){
  $('analyticsStatus').textContent='Carregando estatísticas...';
  const [from,to]=analyticsPeriod();
@@ -94,6 +96,7 @@ async function refreshAnalytics(){
    if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0,share:0,ad:0,adView:0});
    counts.get(ev.productId)[ev.type]++;
   }
+  rankingCache={view:['view','buy'].includes('view')?[...counts].filter(([id])=>products.some(p=>p.id===id&&p.published!==false)).map(([id,c])=>({id,count:c.view})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count):[],buy:[...counts].filter(([id])=>products.some(p=>p.id===id&&p.published!==false)).map(([id,c])=>({id,count:c.buy})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count)};$('rankingViews').innerHTML=rankingList('view');$('rankingBuys').innerHTML=rankingList('buy');$('popularPublishStatus').textContent='Período: '+$('analyticsPeriod').selectedOptions[0].textContent+'. Publicação manual para evitar leituras extras no site.';
   for(const [type,id] of [['visit','metricVisits'],['view','metricViews'],['buy','metricBuys'],['share','metricShares'],['ad','metricAds'],['adView','metricAdViews']])$(id).textContent=totals[type].toLocaleString('pt-BR');
   $('analyticsRows').innerHTML=[...counts].sort((a,b)=>(b[1].view+b[1].buy+b[1].ad)-(a[1].view+a[1].buy+a[1].ad)).map(([id,c])=>`<tr><td>${esc(products.find(p=>p.id===id)?.name||(c.ad?'Anúncio / campanha: '+id:'Produto removido: '+id))}</td><td>${c.view}</td><td>${c.adView}</td><td>${c.ad}</td><td>${c.buy}</td><td>${c.share}</td></tr>`).join('')||'<tr><td colspan="6">Nenhum registro neste período.</td></tr>';
   $('analyticsHistory').innerHTML=lastAnalytics.slice(0,100).map(ev=>`<tr><td>${new Date(ev.createdAt).toLocaleString('pt-BR')}</td><td>${esc(({visit:'Visita',view:'Visualização',buy:'Comprar',share:'Compartilhar',ad:'Clique em anúncio',adView:'Anúncio visualizado'})[ev.type]||ev.type)}</td><td>${esc(ev.productId==='site'?'Loja':products.find(p=>p.id===ev.productId)?.name||ev.productId)}</td></tr>`).join('')||'<tr><td colspan="3">Sem atividades.</td></tr>';
