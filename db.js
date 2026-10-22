@@ -150,7 +150,21 @@ export async function loadAnalytics(from,to){
  }
  return {events:out,truncated:true};
 }
-export async function deleteAnalytics(from,to){
+export async function deleteAnalytics(from,to,types=['visit','view','buy','share','ad','adView']){
+ const allowed=new Set(['visit','view','buy','share','ad','adView']);if(!Array.isArray(types)||!types.length||types.some(t=>!allowed.has(t)))throw Error('Seleção de eventos inválida');
+ const selected=new Set(types);let cursor;let removed=0;
+ // Pagina pelo intervalo, filtrando os tipos no cliente para não exigir novos índices Firestore.
+ for(let i=0;i<10000;i++){
+  const clauses=[api.where('createdAt','>=',from),api.where('createdAt','<=',to),api.orderBy('createdAt','desc'),api.limit(350)];if(cursor)clauses.push(api.startAfter(cursor));
+  const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),...clauses));if(snap.empty)break;
+  const batch=api.writeBatch(db);let count=0;for(const d of snap.docs){if(selected.has(d.data().type)){batch.delete(d.ref);count++}}
+  if(count){await batch.commit();removed+=count}
+  cursor=snap.docs[snap.docs.length-1];if(snap.size<350)break;
+ }
+ return removed;
+}
+/* Legacy deletion removed below. */
+export async function deleteAnalyticsLegacy(from,to){
  let removed=0;
  for(let i=0;i<1000;i++){
   const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),api.where('createdAt','>=',from),api.where('createdAt','<=',to),api.limit(350)));
