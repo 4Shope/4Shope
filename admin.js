@@ -1,6 +1,6 @@
 import {initAdminTools,renderAdminTools} from './admin-tools.js';
 import {iconGroups,iconSVG,resolveIcon} from './category-icons.js';
-import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,deleteAnalytics} from './db.js';
+import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,loadProductStats,deleteAnalytics} from './db.js';
 import {initialSettings,currency,safeUrl,escapeHTML as esc} from './data.js';
 const $=id=>document.getElementById(id);let products=[],categories=[],settings={...initialSettings};
 const say=(s,error=false)=>{const el=$('adminMessage');el.textContent=s;el.style.color=error?'#c44':'#28845a';clearTimeout(window._msg);window._msg=setTimeout(()=>el.textContent='',5000)};
@@ -107,28 +107,29 @@ function analyticsPeriod(){
 let lastAnalytics=[];let rankingCache={view:[],buy:[]};
 function rankingList(type){return rankingCache[type].slice(0,10).map((item,i)=>`<div class="rank-row"><span class="rank-number">${i+1}</span><span>${esc(products.find(p=>p.id===item.id)?.name||'Produto indisponível')}</span><strong>${item.count}</strong></div>`).join('')||'<p class="admin-hint">Sem dados neste período.</p>'}
 $('publishPopular').onclick=async()=>{if(!rankingCache.view.length&&!rankingCache.buy.length){say('Atualize as estatísticas antes de publicar.',true);return}if(!confirm('Atualizar a vitrine Em alta com os rankings deste período?'))return;try{await saveSettings({...settings,popularSnapshot:{view:rankingCache.view.slice(0,8).map(x=>x.id),buy:rankingCache.buy.slice(0,8).map(x=>x.id),updatedAt:Date.now()}});await refresh();$('popularPublishStatus').textContent='Ranking publicado na loja.';say('Ranking publicado com sucesso.')}catch(e){console.error(e);say('Não foi possível publicar o ranking.',true)}};
+function selectedStatMonths(){
+ const now=new Date(),count={week:1,month:1,semester:6,year:12}[$('analyticsPeriod').value]||1;
+ return Array.from({length:count},(_,i)=>new Date(Date.UTC(now.getFullYear(),now.getMonth()-i,1)).toISOString().slice(0,7).replace('-',''));
+}
 async function refreshAnalytics(){
- $('analyticsStatus').textContent='Carregando acessos e cliques em Comprar...';
- const [from,to]=analyticsPeriod();
+ $('analyticsStatus').textContent='Carregando contadores mensais...';
  try{
-  const result=await loadAnalytics(from,to);
+  const stats=await loadProductStats(selectedStatMonths());
   const counts=new Map();let views=0,buys=0;
-  for(const ev of result.events){
-   if(ev.type!=='view'&&ev.type!=='buy')continue;
-   if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0});
-   counts.get(ev.productId)[ev.type]++;
-   if(ev.type==='view')views++;else buys++;
+  for(const item of stats){
+   const v=Number(item.views)||0,b=Number(item.buys)||0;
+   if(!counts.has(item.productId))counts.set(item.productId,{view:0,buy:0});
+   counts.get(item.productId).view+=v;counts.get(item.productId).buy+=b;views+=v;buys+=b;
   }
   const pub=new Set(products.filter(p=>p.published!==false).map(p=>p.id));
   const ranked=type=>[...counts].filter(([id])=>pub.has(id)).map(([id,v])=>({id,count:v[type]})).filter(v=>v.count>0).sort((a,b)=>b.count-a.count);
   rankingCache={view:ranked('view'),buy:ranked('buy')};
-  $('rankingViews').innerHTML=rankingList('view');
-  $('rankingBuys').innerHTML=rankingList('buy');
+  $('rankingViews').innerHTML=rankingList('view');$('rankingBuys').innerHTML=rankingList('buy');
   $('metricViews').textContent=views.toLocaleString('pt-BR');
   $('metricBuys').textContent=buys.toLocaleString('pt-BR');
-  $('popularPublishStatus').textContent='Período: '+$('analyticsPeriod').selectedOptions[0].textContent+'. Publique o ranking quando quiser atualizar a vitrine.';
-  $('analyticsStatus').textContent='Dados do período: '+views+' acessos e '+buys+' cliques em Comprar'+(result.truncated?'. Limite de 20 mil eventos atingido; selecione um período menor.':'.')+' Não representam vendas confirmadas.';
- }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao consultar estatísticas. Confira as regras do Firestore e a conexão.'}
+  $('popularPublishStatus').textContent='Período: '+$('analyticsPeriod').selectedOptions[0].textContent+'. Publique para atualizar a vitrine.';
+  $('analyticsStatus').textContent=stats.length+' contadores mensais, '+views+' acessos e '+buys+' cliques em Comprar. Histórico antigo não incluído.';
+ }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao ler contadores. Verifique as regras do Firebase.'}
 }
 $('refreshAnalytics').onclick=refreshAnalytics;
 $('analyticsPeriod').onchange=refreshAnalytics;
