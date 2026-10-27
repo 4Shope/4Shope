@@ -1,6 +1,6 @@
 import {initAdminTools,renderAdminTools} from './admin-tools.js';
 import {iconGroups,iconSVG,resolveIcon} from './category-icons.js';
-import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,loadProductStats,deleteAnalytics} from './db.js?v=20261027-aggregate1';
+import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,loadProductStats,deleteAnalytics,clearLegacyEvents,clearMonthlyStatsBefore} from './db.js?v=20261027-aggregate1';
 import {initialSettings,currency,safeUrl,escapeHTML as esc} from './data.js';
 const $=id=>document.getElementById(id);let products=[],categories=[],settings={...initialSettings};
 const say=(s,error=false)=>{const el=$('adminMessage');el.textContent=s;el.style.color=error?'#c44':'#28845a';clearTimeout(window._msg);window._msg=setTimeout(()=>el.textContent='',5000)};
@@ -131,6 +131,57 @@ async function refreshAnalytics(){
   $('analyticsStatus').textContent=stats.length+' contadores mensais, '+views+' acessos e '+buys+' cliques em Comprar. Histórico antigo não incluído.';
  }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao ler contadores. Verifique as regras do Firebase.'}
 }
+// Preferencias locais deste navegador administrativo, sem gravacoes adicionais no Firestore.
+const cleanKey='4shope-stats-clean-policy';
+let cleanupBusy=false;
+function cleanupPolicy(){
+ try{const v=JSON.parse(localStorage.getItem(cleanKey)||'{}');return {enabled:v.enabled===true,months:[1,3,6,12,18,24,36].includes(Number(v.months))?Number(v.months):12,frequency:[1,7,15,30].includes(Number(v.frequency))?Number(v.frequency):7,lastRun:Number(v.lastRun)||0}}catch{return {enabled:false,months:12,frequency:7,lastRun:0}}
+}
+function initCleanupFields(){
+ const p=cleanupPolicy();$('statsAutoClean').checked=p.enabled;$('statsRetention').value=p.months;$('statsFrequency').value=p.frequency;
+}
+function monthsCutoff(months){
+ // Mantem o mes atual e os meses anteriores ate a retencao escolhida.
+ const n=new Date(),d=new Date(Date.UTC(n.getFullYear(),n.getMonth()-(months-1),1));
+ return d.toISOString().slice(0,7).replace('-','');
+}
+function saveCleanupPolicy(lastRun){
+ const prev=cleanupPolicy(),v={enabled:$('statsAutoClean').checked,months:Number($('statsRetention').value),frequency:Number($('statsFrequency').value),lastRun:lastRun===undefined?prev.lastRun:lastRun};
+ localStorage.setItem(cleanKey,JSON.stringify(v));return v;
+}
+async function runCleanup(auto=false){
+ if(cleanupBusy)return;
+ if(!auto&&!confirm('Excluir PERMANENTEMENTE os contadores mensais fora do prazo escolhido? Essa acao nao pode ser desfeita.'))return;
+ cleanupBusy=true;const status=$('statsCleanupStatus');status.textContent='Consultando e removendo contadores vencidos...';
+ try{
+  const policy=cleanupPolicy(),cutoff=monthsCutoff(policy.months);
+  const result=await clearMonthlyStatsBefore(cutoff);
+  saveCleanupPolicy(result.complete?Date.now():undefined);
+  status.textContent=result.removed+' contadores removidos (meses anteriores a '+cutoff.slice(0,4)+'/'+cutoff.slice(4)+').'+(result.complete?' Limpeza concluida.':' Ha mais registros; execute novamente.');
+  if(result.removed)await refreshAnalytics();
+ }catch(e){console.error(e);status.textContent='Erro na limpeza: '+(e.code||e.message)}
+ finally{cleanupBusy=false}
+}
+async function maybeCleanupStats(){
+ const p=cleanupPolicy();
+ if(p.enabled&&Date.now()-p.lastRun>=p.frequency*86400000)await runCleanup(true);
+}
+$('saveStatsPolicy').onclick=()=>{
+ const old=cleanupPolicy(),next=saveCleanupPolicy(old.months!==Number($('statsRetention').value)?0:undefined);
+ $('statsCleanupStatus').textContent='Preferencias salvas neste navegador. '+(next.enabled?'A limpeza sera verificada quando abrir Estatisticas.':'Limpeza periodica desativada.');
+};
+$('runStatsCleanup').onclick=()=>runCleanup(false);
+$('clearLegacyStats').onclick=async()=>{
+ if(cleanupBusy)return;
+ if(!confirm('Excluir TODOS os eventos antigos de analyticsEvents? Os novos contadores e produtos serao preservados.'))return;
+ if(!confirm('CONFIRMA a exclusao definitiva do historico antigo? Nao ha como desfazer.'))return;
+ cleanupBusy=true;const status=$('statsCleanupStatus');status.textContent='Apagando historico antigo em lotes...';
+ try{const r=await clearLegacyEvents();status.textContent=r.removed+' eventos antigos apagados.'+(r.complete?' Limpeza completa.':' Ainda existem registros; clique novamente para continuar.')}
+ catch(e){console.error(e);status.textContent='Erro: '+(e.code||e.message)}
+ finally{cleanupBusy=false}
+};
+initCleanupFields();
+document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',maybeCleanupStats));
 $('refreshAnalytics').onclick=refreshAnalytics;
 $('analyticsPeriod').onchange=refreshAnalytics;
 document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',refreshAnalytics));
