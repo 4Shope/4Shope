@@ -123,24 +123,19 @@ function navigate(restore=false){
 }
 $('loadMoreHome').onclick=()=>{homeLimit+=12;render();$('loadMoreHome').scrollIntoView({behavior:'smooth',block:'center'})};$('searchForm').onsubmit=e=>{e.preventDefault();term=$('searchInput').value.trim();$('categoryFilter').value='';catalogPage=1;renderCatalog();location.hash='produtos';if(location.hash==='#produtos')navigate()};$('categoryFilter').onchange=()=>{catalogPage=1;renderCatalog()};$('sortFilter').onchange=()=>{catalogPage=1;renderCatalog()};$('clearFilters').onclick=()=>{term='';$('searchInput').value='';$('categoryFilter').value='';$('sortFilter').value='new';catalogPage=1;renderCatalog()};$('mobileFilterToggle').onclick=()=>$('categoryFilter').closest('.filter-panel').classList.toggle('open');document.addEventListener('click',e=>{const quick=e.target.closest('[data-quick-category]');if(quick){quickCategory=quick.dataset.quickCategory;renderQuickCategories();return}const share=e.target.closest('[data-share-product]');if(share){e.preventDefault();shareProduct(share.dataset.shareProduct);return}const buy=e.target.closest('[data-buy-product]');if(buy)trackProduct(buy.dataset.buyProduct,'buy');const ad=e.target.closest('[data-ad-id]');if(ad)trackProduct(ad.dataset.adId,'ad');const fav=e.target.closest('[data-fav]');if(fav){e.preventDefault();const id=fav.dataset.fav;favs.has(id)?favs.delete(id):favs.add(id);localStorage.setItem('4shope-favorites',JSON.stringify([...favs]));render();if(location.hash.startsWith('#produto/'))navigate();toast(favs.has(id)?'Adicionado aos favoritos':'Removido dos favoritos')}const cat=e.target.closest('[data-category]');if(cat){$('categoryFilter').value=cat.dataset.category;term='';$('searchInput').value='';catalogPage=1;renderCatalog()}});window.addEventListener('hashchange',()=>{if(!location.hash.startsWith('#produto/'))lastViewed='';navigate()});
 (async()=>{
- const state=$('storeLoadStatus');
- if(!configured){
-  state.innerHTML='<strong>Catálogo temporariamente indisponível.</strong><small>Configuração do serviço não encontrada.</small>';
-  return;
+ if(configured){
+  try{
+   const data=await loadPublic();
+   products=data.products;
+   categories=data.categories.length?data.categories.sort((a,b)=>(a.order||0)-(b.order||0)):initialCategories;
+   settings={...initialSettings,...(data.settings||{})};
+  }catch(e){
+   console.error('Falha ao carregar a vitrine:',e);
+   toast('Não foi possível carregar os produtos. Tente atualizar.');
+  }
  }
- try{
-  const data=await loadPublic();
-  products=data.products;
-  categories=data.categories.length?data.categories.sort((a,b)=>(a.order||0)-(b.order||0)):initialCategories;
-  settings={...initialSettings,...(data.settings||{})};
-  render();
-  navigate(true);
-  state.hidden=true;
- }catch(e){
-  console.error('Falha ao carregar catalogo:',e);
-  state.innerHTML='<strong>Não foi possível carregar os produtos.</strong><small>Confira a conexão e tente novamente. Não mostraremos uma lista incompleta.</small><button type="button" class="small-btn" id="retryStoreLoad">Tentar novamente</button>';
-  $('retryStoreLoad').onclick=()=>location.reload();
- }
+ render();
+ navigate(true);
 })();
 
 /* Banners e campanhas editáveis no painel. */
