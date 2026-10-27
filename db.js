@@ -134,7 +134,7 @@ export const saveSettings=(data)=>
 
 // Eventos sem IP, usuário, cookie, fingerprint ou identificador de sessão.
 export async function recordProductEvent(productId,type){
- if(!configured||!['visit','view','buy','share','ad','adView'].includes(type)||!/^[a-zA-Z0-9_-]{1,100}$/.test(productId))return;
+ if(!configured||!['view','buy'].includes(type)||!/^[a-zA-Z0-9_-]{1,100}$/.test(productId))return;
  await api.addDoc(api.collection(db,'analyticsEvents'),{productId,type,createdAt:Date.now()});
 }
 // Consulta limitada ao intervalo solicitado; paginação para não truncar períodos longos.
