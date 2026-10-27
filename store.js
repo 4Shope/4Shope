@@ -1,4 +1,4 @@
-import {configured,loadPublic,recordProductEvent} from './db.js';
+import {configured,loadPublic,recordProductEvent} from './db.js?v=20261027-aggregate1';
 import {iconSVG} from './category-icons.js';
 import {initialCategories,initialSettings,placeholder,currency,safeUrl,escapeHTML as esc,sanitizeId} from './data.js';
 const $=id=>document.getElementById(id);let products=[],categories=initialCategories,settings=initialSettings;let favs=new Set(JSON.parse(localStorage.getItem('4shope-favorites')||'[]'));let term='';const themeKey='4shope-theme';
