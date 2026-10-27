@@ -22,7 +22,8 @@ if(configured){
       where,
       limit,
       writeBatch,
-      startAfter
+      startAfter,
+      increment
     },
     {
       getAuth,
@@ -56,7 +57,8 @@ if(configured){
     writeBatch,
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    increment
   };
 }
 
@@ -132,12 +134,23 @@ export const removeCategory=(id)=>
 export const saveSettings=(data)=>
   api.setDoc(api.doc(db,'settings','public'),data);
 
-// Eventos sem IP, usuário, cookie, fingerprint ou identificador de sessão.
+// Agregados mensais: um documento por produto por mês, sem histórico individual.
+// Cada interação gera somente uma gravação; relatórios leem apenas os agregados.
 export async function recordProductEvent(productId,type){
  if(!configured||!['view','buy'].includes(type)||!/^[a-zA-Z0-9_-]{1,100}$/.test(productId))return;
- await api.addDoc(api.collection(db,'analyticsEvents'),{productId,type,createdAt:Date.now()});
+ const month=new Date().toISOString().slice(0,7).replace('-','');
+ const ref=api.doc(db,'productStatsMonthly',productId+'_'+month);
+ await api.setDoc(ref,{productId,month,views:api.increment(type==='view'?1:0),buys:api.increment(type==='buy'?1:0)},{merge:true});
 }
-// Consulta limitada ao intervalo solicitado; paginação para não truncar períodos longos.
+export async function loadProductStats(months){
+ if(!configured)return [];
+ const all=await Promise.all([...new Set(months)].map(month=>
+  api.getDocs(api.query(api.collection(db,'productStatsMonthly'),api.where('month','==',month)))
+ ));
+ return all.flatMap(snapshot=>snapshot.docs.map(d=>({id:d.id,...d.data()})));
+}
+// Compatibilidade com eventos antigos: disponível para migração/limpeza futura, sem
+// consultar estes registros automaticamente ao abrir o painel.
 export async function loadAnalytics(from,to){
  const out=[];let cursor;
  for(let page=0;page<40;page++){
@@ -151,29 +164,18 @@ export async function loadAnalytics(from,to){
  return {events:out,truncated:true};
 }
 export async function deleteAnalytics(from,to,types=['visit','view','buy','share','ad','adView']){
- const allowed=new Set(['visit','view','buy','share','ad','adView']);if(!Array.isArray(types)||!types.length||types.some(t=>!allowed.has(t)))throw Error('Seleção de eventos inválida');
- const selected=new Set(types);let cursor;let removed=0;
- // Pagina pelo intervalo, filtrando os tipos no cliente para não exigir novos índices Firestore.
- for(let i=0;i<10000;i++){
-  const clauses=[api.where('createdAt','>=',from),api.where('createdAt','<=',to),api.orderBy('createdAt','desc'),api.limit(350)];if(cursor)clauses.push(api.startAfter(cursor));
-  const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),...clauses));if(snap.empty)break;
-  const batch=api.writeBatch(db);let count=0;for(const d of snap.docs){if(selected.has(d.data().type)){batch.delete(d.ref);count++}}
-  if(count){await batch.commit();removed+=count}
-  cursor=snap.docs[snap.docs.length-1];if(snap.size<350)break;
- }
- return removed;
-}
-/* Legacy deletion removed below. */
-export async function deleteAnalyticsLegacy(from,to){
+ const allowed=new Set(['visit','view','buy','share','ad','adView']);
+ if(!Array.isArray(types)||!types.length||types.some(t=>!allowed.has(t)))throw Error('Seleção inválida');
  let removed=0;
- for(let i=0;i<1000;i++){
+ for(let page=0;page<10000;page++){
   const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),api.where('createdAt','>=',from),api.where('createdAt','<=',to),api.limit(350)));
   if(snap.empty)break;
-  const batch=api.writeBatch(db);snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();removed+=snap.size;
+  const selected=snap.docs.filter(d=>types.includes(d.data().type));
+  if(!selected.length)break;
+  const batch=api.writeBatch(db);selected.forEach(d=>batch.delete(d.ref));await batch.commit();removed+=selected.length;
  }
  return removed;
 }
-
 /* Atualiza apenas campos escolhidos, em lotes pequenos, preservando o restante. */
 export async function updateProductsBulk(items){
  if(!configured)throw Error('Firebase não configurado');
