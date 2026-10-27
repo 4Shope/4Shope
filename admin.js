@@ -133,13 +133,6 @@ async function refreshAnalytics(){
 }
 $('refreshAnalytics').onclick=refreshAnalytics;
 $('analyticsPeriod').onchange=refreshAnalytics;
-$('deleteAnalytics').onclick=async()=>{
- const [from,to]=analyticsPeriod(),period=$('analyticsPeriod').selectedOptions[0].textContent;
- const types=[...document.querySelectorAll('.analytics-delete-types input:checked')].map(x=>x.value);if(!types.length){say('Escolha pelo menos um tipo de dado para apagar.',true);return}const labels={visit:'visitas',view:'visualizações de produtos',buy:'cliques em Comprar',share:'compartilhamentos',ad:'cliques em banners',adView:'visualizações de banners'};const desc=types.map(x=>labels[x]).join(', ');if(!confirm('Excluir DEFINITIVAMENTE '+desc+' de '+period+'? Os demais dados serão preservados.'))return;
- if(!confirm('Confirmar exclusão permanente apenas dos tipos selecionados?'))return;
- $('analyticsStatus').textContent='Excluindo eventos...';
- try{const count=await deleteAnalytics(from,to,types);say(count+' eventos excluídos.');await refreshAnalytics()}catch(e){console.error(e);say('Erro ao excluir eventos: '+(e.code||e.message),true)}
-};
 document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',refreshAnalytics));
 
 initAdminTools({products:()=>products,categories:()=>categories,refresh,say,edit:editProduct});
