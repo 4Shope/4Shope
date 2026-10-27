@@ -20,7 +20,8 @@ function editProduct(id){const p=products.find(p=>p.id===id);$('productEditor').
 $('newProduct').onclick=()=>editProduct();$('cancelProduct').onclick=()=>$('productEditor').classList.add('hidden');function preview(){const urls=$('pImages').value.split('\n').map(s=>s.trim()).filter(safeUrl).slice(0,8);$('imagePreview').innerHTML=urls.map(s=>`<img src="${esc(safeUrl(s))}" style="width:70px;height:70px;object-fit:cover;border-radius:7px" onerror="this.style.display='none'" alt="Prévia">`).join('')}$('pImages').oninput=preview;
 $('productForm').onsubmit=async e=>{e.preventDefault();const id=$('pId').value;const images=$('pImages').value.split('\n').map(s=>s.trim()).filter(Boolean);if(images.some(s=>!safeUrl(s))||!safeUrl($('pLink').value)){say('Use URLs http/https válidas nas imagens e no link de afiliado.',true);return}if($('pVideo').value.trim()&&!videoLink($('pVideo').value)){say('Link de vídeo inválido: use YouTube ou MP4 HTTPS.',true);return}const old=products.find(p=>p.id===id);const selectedCategories=[...$('pCategories').querySelectorAll('input:checked')].map(el=>el.value);if(!selectedCategories.length){say('Selecione pelo menos uma categoria.',true);return}const data={name:$('pName').value.trim(),category:selectedCategories[0],categories:selectedCategories,price:$('pPrice').value.trim()===''?null:Number($('pPrice').value),oldPrice:$('pOldPrice').value.trim()===''?null:Number($('pOldPrice').value),description:$('pDescription').value.trim(),images,videoUrl:videoLink($('pVideo').value),affiliateUrl:safeUrl($('pLink').value),badge:$('pBadge').value.trim(),featured:$('pFeatured').checked,published:$('pPublished').checked,createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};try{await saveProduct(data,id);await refresh();$('productEditor').classList.add('hidden');say('Produto salvo com sucesso.')}catch(err){console.error(err);say('Erro ao salvar. Verifique suas permissões.',true)}};
 $('productRows').onclick=async e=>{const view=e.target.closest('[data-view-p]');if(view){const p=products.find(x=>x.id===view.dataset.viewP);if(p){editProduct(p.id);previewProductDraft()}return}const edit=e.target.closest('[data-edit-p]');const del=e.target.closest('[data-del-p]');if(edit)editProduct(edit.dataset.editP);if(del&&confirm('Excluir definitivamente este produto?')){try{await removeProduct(del.dataset.delP);await refresh();say('Produto excluído.')}catch(err){console.error(err);say('Não foi possível excluir.',true)}}};
-function renderCategories(){$('categoryRows').innerHTML=categories.length?categories.map(c=>`<div class="contact-row"><span>${iconSVG(c.icon,c.name)} ${esc(c.name)}</span><span><button class="small-btn" data-edit-c="${esc(c.id)}">Editar</button><button class="small-btn danger" data-del-c="${esc(c.id)}">Excluir</button></span></div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Cadastre suas primeiras categorias abaixo.</p>'}
+function renderCategories(){const q=($('categorySearch')?.value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const visible=categories.filter(c=>c.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q));$('categoryRows').innerHTML=visible.length?visible.map(c=>`<div class="contact-row"><span>${safeUrl(c.image)?`<img class="category-admin-thumb" src="${esc(safeUrl(c.image))}" alt="" loading="lazy">`:iconSVG(c.icon,c.name)} ${esc(c.name)}</span><span><button class="small-btn" data-edit-c="${esc(c.id)}">Editar</button><button class="small-btn danger" data-del-c="${esc(c.id)}">Excluir</button></span></div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Cadastre suas primeiras categorias abaixo.</p>'}
+$('categorySearch').oninput=renderCategories;
 function renderCategoryIcons(){
  const chosen=resolveIcon($('cIcon').value,$('cName').value);
  $('categoryIconChoices').innerHTML=Object.entries(iconGroups).map(([group,icons],i)=>`<details class="icon-group" ${icons.includes(chosen)||(!icons.some(x=>x===chosen)&&i===0)?'open':''}><summary>${esc(group)} <span>${icons.length} ícones</span></summary><div class="icon-options">${icons.map(icon=>`<button type="button" class="icon-choice ${chosen===icon?'selected':''}" data-category-icon="${icon}" title="${icon}" aria-label="Escolher ícone ${icon}" aria-pressed="${chosen===icon}">${iconSVG(icon)}</button>`).join('')}</div></details>`).join('');
@@ -30,8 +31,8 @@ $('categoryIconChoices').onclick=e=>{const b=e.target.closest('[data-category-ic
 $('cIcon').oninput=renderCategoryIcons;
 renderCategoryIcons();
 function clearCategory(){$('categoryForm').reset();$('cId').value='';$('categoryEditorTitle').textContent='Nova categoria';renderCategoryIcons()}$('cancelCategory').onclick=clearCategory;
-$('categoryRows').onclick=async e=>{const edit=e.target.closest('[data-edit-c]');const del=e.target.closest('[data-del-c]');if(edit){const c=categories.find(c=>c.id===edit.dataset.editC);$('cId').value=c.id;$('cName').value=c.name;$('cIcon').value=c.icon||'';renderCategoryIcons();$('cOrder').value=c.order||0;$('categoryEditorTitle').textContent='Editar categoria'}if(del){if(products.some(p=>p.category===del.dataset.delC||(Array.isArray(p.categories)&&p.categories.includes(del.dataset.delC)))){say('Mova os produtos desta categoria antes de excluí-la.',true);return}if(confirm('Excluir esta categoria?'))try{await removeCategory(del.dataset.delC);await refresh();say('Categoria excluída.')}catch(err){console.error(err);say('Não foi possível excluir.',true)}}};
-$('categoryForm').onsubmit=async e=>{e.preventDefault();const id=$('cId').value;const data={name:$('cName').value.trim(),icon:$('cIcon').value.trim()||'✦',order:Number($('cOrder').value)||0};try{await saveCategory(data,id);clearCategory();await refresh();say('Categoria salva.')}catch(err){console.error(err);say('Não foi possível salvar categoria.',true)}};
+$('categoryRows').onclick=async e=>{const edit=e.target.closest('[data-edit-c]');const del=e.target.closest('[data-del-c]');if(edit){const c=categories.find(c=>c.id===edit.dataset.editC);$('cId').value=c.id;$('cName').value=c.name;$('cIcon').value=c.icon||'';$('cImage').value=c.image||'';renderCategoryIcons();$('cOrder').value=c.order||0;$('categoryEditorTitle').textContent='Editar categoria'}if(del){if(products.some(p=>p.category===del.dataset.delC||(Array.isArray(p.categories)&&p.categories.includes(del.dataset.delC)))){say('Mova os produtos desta categoria antes de excluí-la.',true);return}if(confirm('Excluir esta categoria?'))try{await removeCategory(del.dataset.delC);await refresh();say('Categoria excluída.')}catch(err){console.error(err);say('Não foi possível excluir.',true)}}};
+$('categoryForm').onsubmit=async e=>{e.preventDefault();const id=$('cId').value;const data={name:$('cName').value.trim(),icon:$('cIcon').value.trim()||'✦',image:safeUrl($('cImage').value.trim()),order:Number($('cOrder').value)||0};try{await saveCategory(data,id);clearCategory();await refresh();say('Categoria salva.')}catch(err){console.error(err);say('Não foi possível salvar categoria.',true)}};
 function videoLink(s){if(!s.trim())return '';try{const u=new URL(s);const h=u.hostname.toLowerCase();return u.protocol==='https:'&&(['youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(h)||u.pathname.toLowerCase().endsWith('.mp4'))?u.href:''}catch{return ''}}
 
 /* Prévia manual de posts: não depende da API privada do Instagram. */
@@ -53,14 +54,34 @@ const validDestination=u=>!u||!!safeUrl(u)||/^#(?:campanha|produto)\/[a-zA-Z0-9_
 const activeToday=item=>{const d=new Date().toISOString().slice(0,10);return item.active!==false&&(!item.start||item.start<=d)&&(!item.end||item.end>=d)};
 async function persistMarketing(patch){await saveSettings({...settings,...patch});await refresh()}
 function renderMarketing(){
- const campaigns=settings.campaigns||[];
+ const q=($('campaignSearch')?.value||'').toLocaleLowerCase('pt-BR');
+ const bq=($('bannerSearch')?.value||'').toLocaleLowerCase('pt-BR');
+ const campaigns=(settings.campaigns||[]).filter(c=>c.name.toLocaleLowerCase('pt-BR').includes(q));
  $('campaignRows').innerHTML=campaigns.length?campaigns.map(c=>`<div class="contact-row"><span><strong>${esc(c.name)}</strong><br><small>${activeToday(c)?'No ar':'Inativa ou agendada'} · ${(c.productIds||[]).length} produtos</small></span><span><button class="small-btn" data-edit-campaign="${esc(c.id)}">Editar</button><button class="small-btn danger" data-delete-campaign="${esc(c.id)}">Excluir</button></span></div>`).join(''):'<p>Nenhuma campanha criada ainda.</p>';
- const banners=[...(settings.marketingBanners||[])].sort((a,b)=>String(a.placement).localeCompare(String(b.placement))||(a.order||0)-(b.order||0));
+ const banners=[...(settings.marketingBanners||[])].filter(b=>b.title.toLocaleLowerCase('pt-BR').includes(bq)).sort((a,b)=>String(a.placement).localeCompare(String(b.placement))||(a.order||0)-(b.order||0));
  $('marketingBannerRows').innerHTML=banners.length?banners.map(b=>`<div class="contact-row"><span><strong>${esc(b.title)}</strong><br><small>${esc(({hero:'Topo',mid:'Entre vitrines',bottom:'Final'})[b.placement]||'Topo')} · ${activeToday(b)?'No ar':'Inativo ou agendado'}</small></span><span><button class="small-btn" data-move-banner="up" data-banner-id="${esc(b.id)}" title="Subir banner" aria-label="Subir banner">↑</button><button class="small-btn" data-move-banner="down" data-banner-id="${esc(b.id)}" title="Descer banner" aria-label="Descer banner">↓</button><button class="small-btn" data-edit-banner="${esc(b.id)}">Editar</button><button class="small-btn danger" data-delete-banner="${esc(b.id)}">Excluir</button></span></div>`).join(''):'<p>Nenhum banner de marketing cadastrado.</p>';
 }
+$('campaignSearch').oninput=renderMarketing;$('bannerSearch').oninput=renderMarketing;
+function filterCampaignProducts(){
+ const q=($('campaignProductSearch').value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const cat=$('campaignProductCategory').value;
+ let count=0;
+ $('campaignProductChoices').querySelectorAll('label.marketing-choice').forEach(label=>{
+  const input=label.querySelector('input');if(!input)return;
+  if(input.checked)count++;
+  const p=products.find(p=>p.id===input.value);
+  const name=(p?.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  label.hidden=!name.includes(q)||(cat&&!([...(p?.categories||[]),p?.category].includes(cat)));
+ });
+ $('campaignSelectedCount').textContent=count+' produtos selecionados';
+}
+$('campaignProductSearch').oninput=filterCampaignProducts;
+$('campaignProductCategory').onchange=filterCampaignProducts;
+$('campaignProductChoices').onchange=filterCampaignProducts;
 function editCampaign(id){
  const c=(settings.campaigns||[]).find(x=>x.id===id);$('campaignForm').reset();$('campaignEditor').classList.remove('hidden');$('mCampaignId').value=c?.id||'';$('mCampaignName').value=c?.name||'';$('mCampaignText').value=c?.description||'';$('mCampaignImage').value=c?.image||'';$('mCampaignStart').value=c?.start||'';$('mCampaignEnd').value=c?.end||'';$('mCampaignActive').checked=c?c.active!==false:true;
  $('campaignProductChoices').innerHTML=products.map(p=>`<label class="marketing-choice"><input type="checkbox" value="${esc(p.id)}" ${(c?.productIds||[]).includes(p.id)?'checked':''}><span>${esc(p.name)} ${p.published?'':'(rascunho)'}</span></label>`).join('')||'<p>Cadastre produtos antes de montar uma campanha.</p>';
+ $('campaignProductSearch').value='';$('campaignProductCategory').innerHTML='<option value="">Todas as categorias</option>'+categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');filterCampaignProducts();
  $('campaignEditor').scrollIntoView({behavior:'smooth'});
 }
 $('newCampaign').onclick=()=>editCampaign();
@@ -87,24 +108,27 @@ let lastAnalytics=[];let rankingCache={view:[],buy:[]};
 function rankingList(type){return rankingCache[type].slice(0,10).map((item,i)=>`<div class="rank-row"><span class="rank-number">${i+1}</span><span>${esc(products.find(p=>p.id===item.id)?.name||'Produto indisponível')}</span><strong>${item.count}</strong></div>`).join('')||'<p class="admin-hint">Sem dados neste período.</p>'}
 $('publishPopular').onclick=async()=>{if(!rankingCache.view.length&&!rankingCache.buy.length){say('Atualize as estatísticas antes de publicar.',true);return}if(!confirm('Atualizar a vitrine Em alta com os rankings deste período?'))return;try{await saveSettings({...settings,popularSnapshot:{view:rankingCache.view.slice(0,8).map(x=>x.id),buy:rankingCache.buy.slice(0,8).map(x=>x.id),updatedAt:Date.now()}});await refresh();$('popularPublishStatus').textContent='Ranking publicado na loja.';say('Ranking publicado com sucesso.')}catch(e){console.error(e);say('Não foi possível publicar o ranking.',true)}};
 async function refreshAnalytics(){
- $('analyticsStatus').textContent='Carregando estatísticas...';
+ $('analyticsStatus').textContent='Carregando acessos e cliques em Comprar...';
  const [from,to]=analyticsPeriod();
  try{
-  const result=await loadAnalytics(from,to);lastAnalytics=result.events;
-  const counts=new Map(),totals={visit:0,view:0,buy:0,share:0,ad:0,adView:0};
-  for(const ev of lastAnalytics){
-   if(!(ev.type in totals))continue;
-   totals[ev.type]++;
-   if(ev.type==='visit')continue;
-   if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0,share:0,ad:0,adView:0});
+  const result=await loadAnalytics(from,to);
+  const counts=new Map();let views=0,buys=0;
+  for(const ev of result.events){
+   if(ev.type!=='view'&&ev.type!=='buy')continue;
+   if(!counts.has(ev.productId))counts.set(ev.productId,{view:0,buy:0});
    counts.get(ev.productId)[ev.type]++;
+   if(ev.type==='view')views++;else buys++;
   }
-  rankingCache={view:['view','buy'].includes('view')?[...counts].filter(([id])=>products.some(p=>p.id===id&&p.published!==false)).map(([id,c])=>({id,count:c.view})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count):[],buy:[...counts].filter(([id])=>products.some(p=>p.id===id&&p.published!==false)).map(([id,c])=>({id,count:c.buy})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count)};$('rankingViews').innerHTML=rankingList('view');$('rankingBuys').innerHTML=rankingList('buy');$('popularPublishStatus').textContent='Período: '+$('analyticsPeriod').selectedOptions[0].textContent+'. Publicação manual para evitar leituras extras no site.';
-  for(const [type,id] of [['visit','metricVisits'],['view','metricViews'],['buy','metricBuys'],['share','metricShares'],['ad','metricAds'],['adView','metricAdViews']])$(id).textContent=totals[type].toLocaleString('pt-BR');
-  $('analyticsRows').innerHTML=[...counts].sort((a,b)=>(b[1].view+b[1].buy+b[1].ad)-(a[1].view+a[1].buy+a[1].ad)).map(([id,c])=>`<tr><td>${esc(products.find(p=>p.id===id)?.name||(c.ad?'Anúncio / campanha: '+id:'Produto removido: '+id))}</td><td>${c.view}</td><td>${c.adView}</td><td>${c.ad}</td><td>${c.buy}</td><td>${c.share}</td></tr>`).join('')||'<tr><td colspan="6">Nenhum registro neste período.</td></tr>';
-  $('analyticsHistory').innerHTML=lastAnalytics.slice(0,100).map(ev=>`<tr><td>${new Date(ev.createdAt).toLocaleString('pt-BR')}</td><td>${esc(({visit:'Visita',view:'Visualização',buy:'Comprar',share:'Compartilhar',ad:'Clique em anúncio',adView:'Anúncio visualizado'})[ev.type]||ev.type)}</td><td>${esc(ev.productId==='site'?'Loja':products.find(p=>p.id===ev.productId)?.name||ev.productId)}</td></tr>`).join('')||'<tr><td colspan="3">Sem atividades.</td></tr>';
-  $('analyticsStatus').textContent=lastAnalytics.length+' eventos no período'+(result.truncated?' (limite de 20.000 atingido; reduza o período para consultar tudo)':'')+'. Sem identificação de visitantes. Cliques em Comprar não são vendas.';
- }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao consultar dados. Publique as novas regras do Firestore.'}
+  const pub=new Set(products.filter(p=>p.published!==false).map(p=>p.id));
+  const ranked=type=>[...counts].filter(([id])=>pub.has(id)).map(([id,v])=>({id,count:v[type]})).filter(v=>v.count>0).sort((a,b)=>b.count-a.count);
+  rankingCache={view:ranked('view'),buy:ranked('buy')};
+  $('rankingViews').innerHTML=rankingList('view');
+  $('rankingBuys').innerHTML=rankingList('buy');
+  $('metricViews').textContent=views.toLocaleString('pt-BR');
+  $('metricBuys').textContent=buys.toLocaleString('pt-BR');
+  $('popularPublishStatus').textContent='Período: '+$('analyticsPeriod').selectedOptions[0].textContent+'. Publique o ranking quando quiser atualizar a vitrine.';
+  $('analyticsStatus').textContent='Dados do período: '+views+' acessos e '+buys+' cliques em Comprar'+(result.truncated?'. Limite de 20 mil eventos atingido; selecione um período menor.':'.')+' Não representam vendas confirmadas.';
+ }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao consultar estatísticas. Confira as regras do Firestore e a conexão.'}
 }
 $('refreshAnalytics').onclick=refreshAnalytics;
 $('analyticsPeriod').onchange=refreshAnalytics;
