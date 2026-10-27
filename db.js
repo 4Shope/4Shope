@@ -187,7 +187,7 @@ export async function clearLegacyEvents(maxBatches=100){
  return {removed,complete:false};
 }
 export async function clearMonthlyStatsBefore(cutoff,maxBatches=100){
- if(!/^20\\d{4}$/.test(cutoff))throw Error('Periodo invalido');
+ if(!/^20[0-9]{4}$/.test(cutoff))throw Error('Periodo invalido');
  let removed=0;
  for(let i=0;i<maxBatches;i++){
   const snap=await api.getDocs(api.query(api.collection(db,'productStatsMonthly'),api.where('month','<',cutoff),api.limit(300)));
