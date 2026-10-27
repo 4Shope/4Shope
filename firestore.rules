@@ -16,6 +16,33 @@ service cloud.firestore {
       allow read: if id == 'public';
       allow write: if admin() && id == 'public';
     }
+    // Contadores agregados publicos: apenas incrementos unitarios nos produtos publicados.
+    // Observacao: regras nao impedem bots de simular cliques. Nao sao vendas.
+    match /productStatsMonthly/{id} {
+      allow read: if admin();
+      function validBase() {
+        return request.resource.data.keys().hasOnly(['productId','month','views','buys'])
+          && request.resource.data.keys().hasAll(['productId','month','views','buys'])
+          && request.resource.data.productId is string
+          && request.resource.data.productId.matches('^[a-zA-Z0-9_-]{1,100}$')
+          && request.resource.data.month is string
+          && request.resource.data.month.matches('^20[0-9]{4}$')
+          && id == request.resource.data.productId + '_' + request.resource.data.month
+          && exists(/databases/$(database)/documents/products/$(request.resource.data.productId))
+          && get(/databases/$(database)/documents/products/$(request.resource.data.productId)).data.published == true
+          && request.resource.data.views is int
+          && request.resource.data.buys is int;
+      }
+      allow create: if validBase()
+        && ((request.resource.data.views == 1 && request.resource.data.buys == 0)
+           || (request.resource.data.views == 0 && request.resource.data.buys == 1));
+      allow update: if validBase()
+        && request.resource.data.productId == resource.data.productId
+        && request.resource.data.month == resource.data.month
+        && ((request.resource.data.views == resource.data.views + 1 && request.resource.data.buys == resource.data.buys)
+           || (request.resource.data.views == resource.data.views && request.resource.data.buys == resource.data.buys + 1));
+      allow delete: if admin();
+    }
     match /analyticsEvents/{id} {
       allow get, list, delete: if admin();
       allow create: if request.resource.data.keys().hasOnly(['productId','type','createdAt'])
