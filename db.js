@@ -176,6 +176,26 @@ export async function deleteAnalytics(from,to,types=['visit','view','buy','share
  }
  return removed;
 }
+// Limpeza em lotes. Exclusao so funciona para admin autenticado.
+export async function clearLegacyEvents(maxBatches=100){
+ let removed=0;
+ for(let i=0;i<maxBatches;i++){
+  const snap=await api.getDocs(api.query(api.collection(db,'analyticsEvents'),api.limit(300)));
+  if(snap.empty)return {removed,complete:true};
+  const batch=api.writeBatch(db);snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();removed+=snap.size;
+ }
+ return {removed,complete:false};
+}
+export async function clearMonthlyStatsBefore(cutoff,maxBatches=100){
+ if(!/^20\\d{4}$/.test(cutoff))throw Error('Periodo invalido');
+ let removed=0;
+ for(let i=0;i<maxBatches;i++){
+  const snap=await api.getDocs(api.query(api.collection(db,'productStatsMonthly'),api.where('month','<',cutoff),api.limit(300)));
+  if(snap.empty)return {removed,complete:true};
+  const batch=api.writeBatch(db);snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();removed+=snap.size;
+ }
+ return {removed,complete:false};
+}
 /* Atualiza apenas campos escolhidos, em lotes pequenos, preservando o restante. */
 export async function updateProductsBulk(items){
  if(!configured)throw Error('Firebase não configurado');
