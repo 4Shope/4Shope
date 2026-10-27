@@ -185,3 +185,5 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .category-card.has-category-cover>div{padding:8px 8px 0}
 #tab-analytics .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:650px){#tab-analytics .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.marketing-choices{max-height:330px}.category-admin-thumb{width:52px;height:46px}}
+
+.campaign-type{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:5px}
