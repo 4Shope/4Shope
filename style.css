@@ -187,3 +187,12 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 @media(max-width:650px){#tab-analytics .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.marketing-choices{max-height:330px}.category-admin-thumb{width:52px;height:46px}}
 
 .campaign-type{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:5px}
+
+/* Carregamento completo e perceptivel sem exibir catalogo parcial */
+.store-load-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:34px 18px;margin:18px auto;max-width:560px;min-height:170px;text-align:center;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink)}
+.store-load-state[hidden]{display:none!important}
+.store-load-state strong{font-size:15px}
+.store-load-state small{font-size:12px;color:var(--muted);line-height:1.5}
+.store-load-spinner{width:25px;height:25px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ink);animation:store-spin .85s linear infinite}
+@keyframes store-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.store-load-spinner{animation:none}}
