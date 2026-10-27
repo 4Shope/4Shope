@@ -1,6 +1,6 @@
 import {initAdminTools,renderAdminTools} from './admin-tools.js';
 import {iconGroups,iconSVG,resolveIcon} from './category-icons.js';
-import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,loadProductStats,deleteAnalytics,clearLegacyEvents,clearMonthlyStatsBefore} from './db.js?v=20261027-aggregate1';
+import {configured,getAuthInstance,onAuth,login,logout,loadAdmin,saveProduct,removeProduct,saveCategory,removeCategory,saveSettings,loadAnalytics,loadProductStats,deleteAnalytics,clearLegacyEvents,clearMonthlyStatsBefore} from './db.js?v=20261027-cleanup1';
 import {initialSettings,currency,safeUrl,escapeHTML as esc} from './data.js';
 const $=id=>document.getElementById(id);let products=[],categories=[],settings={...initialSettings};
 const say=(s,error=false)=>{const el=$('adminMessage');el.textContent=s;el.style.color=error?'#c44':'#28845a';clearTimeout(window._msg);window._msg=setTimeout(()=>el.textContent='',5000)};
