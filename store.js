@@ -93,37 +93,64 @@ function trackProduct(id,type){
  recordProductEvent(id,type).catch(()=>{});
 }
 function priceReportUrl(p){const raw=String(settings.whatsapp||'');const match=raw.match(/wa\.me\/(55\d{10,11})/);const digits=match?match[1]:raw.replace(/\D/g,'');const number=/^55\d{10,11}$/.test(digits)?digits:/^\d{10,11}$/.test(digits)?'55'+digits:'';if(!number)return '';const page=new URL(location.pathname+'#produto/'+encodeURIComponent(p.id),location.origin).href;const price=p.price!=null&&p.price!==''?currency(p.price):'não informado';const msg='Olá! Encontrei um preço diferente do anunciado na 4Shope. Poderiam verificar?\n\nProduto: '+p.name+'\nPreço anunciado: '+price+'\nLink: '+page+'\n\nPreço que encontrei na Shopee: ';return 'https://wa.me/'+number+'?text='+encodeURIComponent(msg)}
-function couponWhatsapp(p,c,name){
+
+function couponWhatsapp(p,c,name,phone){
  const raw=String(settings.whatsapp||'');
- const m=raw.match(/wa\.me\/(55\d{10,11})/);
- const digits=m?m[1]:raw.replace(/\D/g,'');
+ const match=raw.match(/wa\.me\/(55\d{10,11})/);
+ const digits=match?match[1]:raw.replace(/\D/g,'');
  const number=/^55\d{10,11}$/.test(digits)?digits:/^\d{10,11}$/.test(digits)?'55'+digits:'';
  if(!number)return '';
  const link=new URL(location.pathname+'#produto/'+encodeURIComponent(p.id),location.origin).href;
- const msg='Olá! Quero solicitar o resgate de uma promoção da 4Shope.\n\nNome: '+name+'\nCupom: '+c.code+'\nProduto: '+p.name+'\nLink: '+link+(c.message?'\nCondições: '+c.message:'')+'\n\nPor favor, confirmem a disponibilidade e as condições da promoção.';
+ const msg='Olá! Quero solicitar uma promoção da 4Shope.\n\nNome: '+name+'\nTelefone: '+phone+'\nCupom: '+c.code+'\nProduto: '+p.name+'\nLink: '+link+(c.message?'\nCondições: '+c.message:'')+'\n\nPor favor, confirmem o resgate e a disponibilidade.';
  return 'https://wa.me/'+number+'?text='+encodeURIComponent(msg);
 }
+function couponValid(c,p){
+ const today=new Date().toISOString().slice(0,10);
+ return c.active!==false&&(!c.start||c.start<=today)&&(!c.end||c.end>=today)
+ &&(!(Array.isArray(c.productIds)&&c.productIds.length)?(!c.productId||c.productId===p.id):c.productIds.includes(p.id))
+ &&(!c.categoryId||productCategoryIds(p).includes(c.categoryId))
+ &&Number(c.used||0)<Number(c.limit||0);
+}
 function couponBox(p){
- const available=(settings.coupons||[]).some(c=>c.active!==false&&(c.used||0)<(c.limit||0)&&(!(Array.isArray(c.productIds)&&c.productIds.length)?(!c.productId||c.productId===p.id):c.productIds.includes(p.id))&&(!c.categoryId||productCategoryIds(p).includes(c.categoryId)));
- if(!available)return '';
- return '<div class="product-coupon-box"><strong>Tem cupom promocional?</strong><p>Informe seu código e nome para solicitar a promoção. O resgate depende de confirmação pelo WhatsApp.</p><label for="couponInput">Código do cupom</label><input id="couponInput" class="field" autocomplete="off" placeholder="Seu cupom"><label for="couponCustomer">Seu nome</label><input id="couponCustomer" class="field" maxlength="80" autocomplete="name" placeholder="Nome para identificação"><button type="button" id="applyProductCoupon" class="small-btn">Aplicar cupom</button><p id="couponFeedback" class="admin-hint" role="status"></p></div>';
+ if(!safeUrl(p.affiliateUrl)||!(settings.coupons||[]).some(c=>couponValid(c,p)))return '';
+ return '<section class="product-coupon-box" aria-label="Cupom promocional">'
+ +'<div class="coupon-heading"><strong>◇ Cupom</strong><span>Tem um código promocional?</span></div>'
+ +'<div id="couponEntry" class="coupon-entry-line"><input id="couponInput" class="field" maxlength="30" autocomplete="off" aria-label="Código do cupom" placeholder="Digite seu cupom"><button type="button" class="small-btn" id="applyProductCoupon">Aplicar</button></div>'
+ +'<div id="couponIdentity" class="coupon-identity" hidden><p>Seu cupom é válido! Identifique-se para continuar.</p><label for="couponCustomer">Nome</label><input id="couponCustomer" class="field" maxlength="80" autocomplete="name" placeholder="Seu nome"><label for="couponPhone">Telefone com DDD</label><input id="couponPhone" class="field" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="(00) 00000-0000"><div class="coupon-entry-line"><button id="confirmProductCoupon" type="button" class="small-btn">Confirmar</button><button id="cancelProductCoupon" type="button" class="small-btn">Voltar</button></div></div>'
+ +'<div id="couponApplied" class="coupon-applied" hidden><span class="coupon-up-arrow">↑</span><strong>Cupom pronto!</strong><span>Toque em <b>Resgatar Promoção</b> acima.</span><small>A promoção depende de confirmação por WhatsApp.</small><button type="button" id="resetProductCoupon" class="coupon-reset">Trocar cupom</button></div>'
+ +'<p id="couponFeedback" class="coupon-feedback" role="status" aria-live="polite"></p></section>';
 }
 function connectCoupon(p){
- const btn=$('applyProductCoupon');if(!btn)return;
- btn.onclick=()=>{
-  const code=($('couponInput').value||'').trim().toUpperCase(),name=($('couponCustomer').value||'').trim();
-  const note=$('couponFeedback'),today=new Date().toISOString().slice(0,10);
-  const c=(settings.coupons||[]).find(c=>c.code===code&&c.active!==false&&(!c.start||c.start<=today)&&(!c.end||c.end>=today)&&(!(Array.isArray(c.productIds)&&c.productIds.length)?(!c.productId||c.productId===p.id):c.productIds.includes(p.id))&&(!c.categoryId||productCategoryIds(p).includes(c.categoryId))&&(Number(c.used)||0)<Number(c.limit));
-  if(!c){note.textContent='Cupom inválido, vencido, esgotado ou não aplicável a este produto.';return}
-  if(name.length<2){note.textContent='Informe seu nome para se identificar ao solicitar a promoção.';return}
-  const target=couponWhatsapp(p,c,name);
-  if(!target){note.textContent='WhatsApp da loja indisponível. Entre em contato pelos canais da 4Shope.';return}
-  const buy=$('buyLink');if(!buy)return;
-  buy.href=target;buy.removeAttribute('data-buy-product');buy.querySelector('strong').textContent='Resgatar Promoção';buy.querySelector('small').textContent='Solicitar confirmação no WhatsApp';
-  note.textContent='Cupom válido! Toque em Resgatar Promoção. A disponibilidade será confirmada no WhatsApp.';
+ const apply=$('applyProductCoupon');if(!apply)return;
+ const entry=$('couponEntry'),identity=$('couponIdentity'),applied=$('couponApplied'),feedback=$('couponFeedback'),buy=$('buyLink');
+ const original=buy?{href:buy.href,strong:buy.querySelector('strong').textContent,small:buy.querySelector('small').textContent}:null;
+ let selected=null;
+ function reset(){
+  selected=null;entry.hidden=false;identity.hidden=true;applied.hidden=true;feedback.textContent='';
+  if(buy&&original){buy.href=original.href;buy.dataset.buyProduct=p.id;buy.querySelector('strong').textContent=original.strong;buy.querySelector('small').textContent=original.small}
+ }
+ apply.onclick=()=>{
+  const code=$('couponInput').value.trim().toUpperCase();
+  const c=(settings.coupons||[]).find(c=>c.code===code&&couponValid(c,p));
+  if(!c){feedback.textContent='Cupom inválido, vencido ou indisponível.';return}
+  selected=c;entry.hidden=true;identity.hidden=false;feedback.textContent='';$('couponCustomer').focus();
+ };
+ $('cancelProductCoupon').onclick=reset;
+ $('resetProductCoupon').onclick=reset;
+ $('confirmProductCoupon').onclick=()=>{
+  const name=$('couponCustomer').value.trim(),phone=$('couponPhone').value.replace(/\D/g,'');
+  if(name.length<2){feedback.textContent='Informe seu nome.';return}
+  if(!/^\d{10,13}$/.test(phone)){feedback.textContent='Informe um telefone válido com DDD.';return}
+  if(!selected||!couponValid(selected,p)){reset();feedback.textContent='Cupom indisponível. Tente outro.';return}
+  const dest=couponWhatsapp(p,selected,name,phone);
+  if(!dest||!buy){feedback.textContent='WhatsApp indisponível. Fale com a 4Shope.';return}
+  buy.href=dest;buy.removeAttribute('data-buy-product');
+  buy.querySelector('strong').textContent='Resgatar Promoção';
+  buy.querySelector('small').textContent='Solicitar pelo WhatsApp';
+  identity.hidden=true;applied.hidden=false;feedback.textContent='';
  };
 }
-let lastViewed='';function renderDetail(id){const p=products.find(x=>x.id===id);if(!p){$('productDetail').innerHTML=empty('Este produto não está disponível.');return}if(lastViewed!==id){lastViewed=id;trackProduct(id,'view')}const imgs=(p.images||[]).filter(safeUrl);if(!imgs.length)imgs.push(placeholder);const link=safeUrl(p.affiliateUrl);$('productDetail').innerHTML=`<div class="detail-layout"><div><div class="detail-photo" id="detailPhoto">${image(imgs[0],p.name)}</div><div class="detail-thumbs">${imgs.map((s,i)=>`<button data-photo="${i}" aria-label="Ver foto ${i+1}">${image(s,p.name)}</button>`).join('')}</div></div><div class="detail-content"><span class="section-kicker">${esc(productCategoryNames(p))}</span><h1>${esc(p.name)}</h1>${Number(p.oldPrice)>Number(p.price)?`<div class="product-old">${currency(p.oldPrice)}</div>`:''}${p.price!=null&&p.price!==''?`<div class="product-price"><small class="price-prefix">A partir de</small>${currency(p.price)}</div>`:''}<details class="product-description-disclosure"><summary>Descrição do produto <span aria-hidden="true">⌄</span></summary><p class="detail-description">${esc(p.description||'Conheça este achado na Shopee.')}</p></details>${videoEmbed(p.videoUrl)}${couponBox(p)}<div class="detail-purchase">${link?`<a class="detail-buy-primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer sponsored" id="buyLink" data-buy-product="${esc(p.id)}"><span class="detail-buy-icon" aria-hidden="true">↗</span><span class="detail-buy-copy"><strong>Comprar agora</strong><small>Finalizar pedido na Shopee</small></span><span class="detail-buy-cart" aria-hidden="true"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M2 3h2l2.6 12.1a2 2 0 0 0 2 1.6h10a2 2 0 0 0 2-1.6L22 7H5"/></svg></span></a>`:'<div class="detail-buy-primary detail-buy-disabled">Link de compra indisponível</div>'}<p class="detail-buy-hint">Confira o valor final, as opções de frete e os cupons disponíveis antes de concluir.</p></div><div class="detail-actions detail-secondary-actions"><button class="btn" data-fav="${esc(p.id)}" style="border-color:var(--line);color:var(--ink)">${favs.has(p.id)?'♥ Salvo':'♡ Favoritar'}</button><button type="button" class="btn" data-share-product="${esc(p.id)}" aria-label="Compartilhar produto">↗ Compartilhar</button></div><div class="price-info-box"><strong>Sobre preços e disponibilidade</strong><p>Os valores são referências e podem variar conforme cor, tamanho, modelo, vendedor, promoções, estoque, região e frete. Confira sempre as condições finais na Shopee.</p>${priceReportUrl(p)?`<a class="price-report-link" href="${esc(priceReportUrl(p))}" target="_blank" rel="noopener noreferrer">Encontrou um preço diferente? Avise pelo WhatsApp ↗</a>`:``}</div><p class="detail-note"><a href="#sobre">Saiba como funciona a 4Shope ↗</a></p></div></div>`;$('productDetail').querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{$('detailPhoto').innerHTML=image(imgs[Number(b.dataset.photo)],p.name)});connectCoupon(p)}
+let lastViewed='';function renderDetail(id){const p=products.find(x=>x.id===id);if(!p){$('productDetail').innerHTML=empty('Este produto não está disponível.');return}if(lastViewed!==id){lastViewed=id;trackProduct(id,'view')}const imgs=(p.images||[]).filter(safeUrl);if(!imgs.length)imgs.push(placeholder);const link=safeUrl(p.affiliateUrl);$('productDetail').innerHTML=`<div class="detail-layout"><div><div class="detail-photo" id="detailPhoto">${image(imgs[0],p.name)}</div><div class="detail-thumbs">${imgs.map((s,i)=>`<button data-photo="${i}" aria-label="Ver foto ${i+1}">${image(s,p.name)}</button>`).join('')}</div></div><div class="detail-content"><span class="section-kicker">${esc(productCategoryNames(p))}</span><h1>${esc(p.name)}</h1>${Number(p.oldPrice)>Number(p.price)?`<div class="product-old">${currency(p.oldPrice)}</div>`:''}${p.price!=null&&p.price!==''?`<div class="product-price"><small class="price-prefix">A partir de</small>${currency(p.price)}</div>`:''}<details class="product-description-disclosure"><summary>Descrição do produto <span aria-hidden="true">⌄</span></summary><p class="detail-description">${esc(p.description||'Conheça este achado na Shopee.')}</p></details>${videoEmbed(p.videoUrl)}<div class="detail-purchase">${link?`<a class="detail-buy-primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer sponsored" id="buyLink" data-buy-product="${esc(p.id)}"><span class="detail-buy-icon" aria-hidden="true">↗</span><span class="detail-buy-copy"><strong>Comprar agora</strong><small>Finalizar pedido na Shopee</small></span><span class="detail-buy-cart" aria-hidden="true"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M2 3h2l2.6 12.1a2 2 0 0 0 2 1.6h10a2 2 0 0 0 2-1.6L22 7H5"/></svg></span></a>`:'<div class="detail-buy-primary detail-buy-disabled">Link de compra indisponível</div>'}<p class="detail-buy-hint">Confira o valor final, as opções de frete e os cupons disponíveis antes de concluir.</p></div><div class="detail-actions detail-secondary-actions"><button class="btn" data-fav="${esc(p.id)}" style="border-color:var(--line);color:var(--ink)">${favs.has(p.id)?'♥ Salvo':'♡ Favoritar'}</button><button type="button" class="btn" data-share-product="${esc(p.id)}" aria-label="Compartilhar produto">↗ Compartilhar</button></div>${couponBox(p)}<div class="price-info-box"><strong>Sobre preços e disponibilidade</strong><p>Os valores são referências e podem variar conforme cor, tamanho, modelo, vendedor, promoções, estoque, região e frete. Confira sempre as condições finais na Shopee.</p>${priceReportUrl(p)?`<a class="price-report-link" href="${esc(priceReportUrl(p))}" target="_blank" rel="noopener noreferrer">Encontrou um preço diferente? Avise pelo WhatsApp ↗</a>`:``}</div><p class="detail-note"><a href="#sobre">Saiba como funciona a 4Shope ↗</a></p></div></div>`;$('productDetail').querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{$('detailPhoto').innerHTML=image(imgs[Number(b.dataset.photo)],p.name)});connectCoupon(p)}
 let previousRoute=location.hash||'#inicio';
 let productReturnRoute='';
 let productReturnY=0;
