@@ -234,12 +234,25 @@ function carouselBlock(c){
  }).join('');
  return '<section class="shop-carousel" aria-label="'+esc(c.name||'Carrossel')+'"><div class="shop-carousel-track">'+cells+'</div><div class="shop-carousel-controls"><button class="shop-carousel-prev" type="button" aria-label="Imagem anterior">‹</button><span class="shop-carousel-counter">1 / '+slides.length+'</span><button class="shop-carousel-next" type="button" aria-label="Próxima imagem">›</button></div></section>';
 }
+function campaignMarkup(c){
+ const img=safeUrl(c.image)?image(c.image,c.name||'Campanha 4Shope','loading="lazy" decoding="async"'):'';
+ const details=(c.name?'<strong>'+esc(c.name)+'</strong>':'')+(c.description?'<p>'+esc(c.description)+'</p>':'');
+ if(!img&&!details)return '';
+ return '<a class="campaign-tile campaign-free" href="#campanha/'+encodeURIComponent(c.id)+'">'+img+(details?'<div>'+details+'</div>':'')+'</a>';
+}
 function renderExtraPromos(){
  const map={hero:'extraHeroPromos',mid:'extraMidPromos',bottom:'extraBottomPromos',product:'extraProductPromos',detail:'extraDetailPromos',categories:'extraCategoryPromos'};
+ const banners=(settings.marketingBanners||[]).filter(marketingVisible);
+ const campaigns=(settings.campaigns||[]).filter(marketingVisible);
  for(const [place,id] of Object.entries(map)){
   const host=$(id);if(!host)continue;
-  const items=[...(settings.partners||[]).filter(p=>p.placement===place&&p.active!==false).map(p=>({...p,kind:'partner'})),...(settings.carousels||[]).filter(c=>c.placement===place&&marketingVisible(c)).map(c=>({...c,kind:'carousel'}))].sort((a,b)=>(a.order||0)-(b.order||0));
-  host.innerHTML=items.map(x=>x.kind==='partner'?promotionBlock(x):carouselBlock(x)).join('');
+  const items=[
+   ...(settings.partners||[]).filter(p=>p.placement===place&&p.active!==false).map(p=>({...p,kind:'partner'})),
+   ...(settings.carousels||[]).filter(c=>c.placement===place&&marketingVisible(c)).map(c=>({...c,kind:'carousel'})),
+   ...banners.filter(b=>b.placement===place).map(x=>({...x,kind:'banner'})),
+   ...campaigns.filter(c=>(c.placement||'bottom')===place).map(x=>({...x,kind:'campaign'}))
+  ].sort((x,y)=>(x.order||0)-(y.order||0));
+  host.innerHTML=items.map(x=>x.kind==='partner'?promotionBlock(x):x.kind==='carousel'?carouselBlock(x):x.kind==='banner'?bannerMarkup(x):campaignMarkup(x)).join('');
  }
 }
 document.addEventListener('click',e=>{
@@ -252,8 +265,7 @@ document.addEventListener('click',e=>{
  track.scrollTo({left:next*track.clientWidth,behavior:'smooth'});
 });
 document.addEventListener('scroll',()=>{}, {passive:true});
-function renderMarketing(){const banners=(settings.marketingBanners||[]).filter(marketingVisible).sort((a,b)=>(a.order||0)-(b.order||0));for(const [place,id] of [['hero','marketingHeroBanners'],['mid','marketingMidBanners'],['bottom','marketingBottomBanners']]){$(id).innerHTML=banners.filter(b=>b.placement===place).map(bannerMarkup).join('')}
- const campaigns=(settings.campaigns||[]).filter(marketingVisible);$('marketingCampaigns').innerHTML=campaigns.length?`<div class="section-head"><div><div class="section-kicker">SELEÇÕES ESPECIAIS</div><h2>Campanhas da 4Shope<span class="period">.</span></h2></div></div><div class="campaign-tiles">${campaigns.map(c=>`<a class="campaign-tile" data-ad-view="${esc(c.id)}" data-ad-id="${esc(c.id)}" href="#campanha/${encodeURIComponent(c.id)}">${safeUrl(c.image)?image(c.image,c.name,'loading="lazy"'):''}<div><small class="campaign-type">${esc(({collection:"Seleção especial",new:"Novidades",featured:"Destaques",seasonal:"Campanha temática",coupons:"Confira os cupons"})[c.type]||"Seleção especial")}</small><strong>${esc(c.name)}</strong><span>Explorar seleção ↗</span></div></a>`).join('')}</div>`:''}
-function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&marketingVisible(x));if(!c){$('campaignDetail').innerHTML=empty('Esta campanha não está disponível.');return}const chosen=products.filter(p=>(c.productIds||[]).includes(p.id));$('campaignDetail').innerHTML=`<div class="page-heading"><div class="section-kicker">CAMPANHA 4SHOPE</div><h1>${esc(c.name)}</h1><p>${esc(c.description||'Uma seleção especial de produtos para você.')}</p></div>${safeUrl(c.image)?`<div class="campaign-cover">${image(c.image,c.name)}</div>`:''}<div class="campaign-share"><button id="shareCampaign" class="small-btn">Compartilhar campanha ↗</button></div><div class="product-grid">${chosen.length?chosen.map(productCard).join(''):empty('Em breve, novos produtos nesta campanha.')}</div>`;const btn=$('shareCampaign');btn.onclick=()=>{const u=location.href;if(navigator.share)navigator.share({title:c.name,url:u}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(u).then(()=>toast('Link copiado!')).catch(()=>toast('Copie o endereço desta página.'));else toast('Copie o endereço desta página.')} }
+function renderMarketing(){ $('marketingCampaigns').innerHTML='';for(const id of ['marketingHeroBanners','marketingMidBanners','marketingBottomBanners'])$(id).innerHTML='';}
+function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&marketingVisible(x));if(!c){$('campaignDetail').innerHTML=empty('Esta campanha não está disponível.');return}const chosen=products.filter(p=>(c.productIds||[]).includes(p.id));$('campaignDetail').innerHTML=`<div class="page-heading"><div class="section-kicker">CAMPANHA 4SHOPE</div>${c.name?`<h1>${esc(c.name)}</h1>`:''}${c.description?`<p>${esc(c.description)}</p>`:''}</div>${safeUrl(c.image)?`<div class="campaign-cover">${image(c.image,c.name||"Campanha 4Shope")}</div>`:''}<div class="campaign-share"><button id="shareCampaign" class="small-btn">Compartilhar campanha ↗</button></div><div class="product-grid">${chosen.length?chosen.map(productCard).join(''):empty('Em breve, novos produtos nesta campanha.')}</div>`;const btn=$('shareCampaign');btn.onclick=()=>{const u=location.href;if(navigator.share)navigator.share({title:c.name,url:u}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(u).then(()=>toast('Link copiado!')).catch(()=>toast('Copie o endereço desta página.'));else toast('Copie o endereço desta página.')} }
 
 // Métricas agregáveis sem identificador de visitante, cookies analíticos ou armazenamento de rastreamento.
