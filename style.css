@@ -196,3 +196,35 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .store-load-spinner{width:25px;height:25px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ink);animation:store-spin .85s linear infinite}
 @keyframes store-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.store-load-spinner{animation:none}}
+
+/* 4Shope: parcerias, carrosseis e cupons (mobile first) */
+.extra-promos{display:grid;gap:14px;min-width:0;margin:18px 0}
+.extra-promos:empty{display:none}
+.partner-tile,.shop-carousel{min-width:0;overflow:hidden;border-radius:17px;border:1px solid var(--line);background:var(--surface)}
+.partner-main{display:flex;align-items:center;gap:14px;padding:14px;color:var(--ink);text-decoration:none}
+.partner-main img{width:95px;height:85px;flex:none;object-fit:contain;border-radius:10px;background:var(--soft)}
+.partner-copy{min-width:0}.partner-copy strong{display:block;font-size:16px}.partner-copy p{font-size:12px;line-height:1.5;color:var(--muted);margin:5px 0 0}
+.partner-links{display:flex;gap:12px;flex-wrap:wrap;padding:0 14px 12px;font-size:12px;color:var(--muted)}
+.partner-links a{color:var(--ink);text-decoration:underline}
+.shop-carousel-track{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.shop-carousel-track::-webkit-scrollbar{display:none}
+.promo-slide{min-width:100%;max-width:100%;scroll-snap-align:center}
+.promo-slide a,.promo-slide picture{display:block;width:100%}
+.promo-slide img{display:block;width:100%;height:auto;max-height:440px;object-fit:contain;background:var(--soft)}
+.shop-carousel-controls{display:flex;align-items:center;justify-content:center;gap:17px;padding:8px}
+.shop-carousel-controls button{background:var(--surface);border:1px solid var(--line);color:var(--ink);width:38px;height:33px;border-radius:9px;font-size:22px}
+.shop-carousel-counter{font-size:12px;color:var(--muted)}
+.carousel-slide-editor{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;display:grid;gap:8px;min-width:0}
+.carousel-slide-header{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.product-coupon-box{border:1px solid var(--line);background:var(--surface);padding:16px;border-radius:14px;display:grid;gap:8px;margin:16px 0}
+.product-coupon-box strong{font-size:15px}
+.product-coupon-box p{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
+.product-coupon-box .field{width:100%}
+@media(max-width:650px){
+ .extra-promos{margin:12px 0;gap:10px}
+ .partner-main{padding:11px;gap:10px}
+ .partner-main img{width:72px;height:74px}
+ .partner-copy strong{font-size:13px}
+ .promo-slide img{max-height:340px;object-fit:contain}
+ .carousel-slide-editor{padding:10px}
+}
