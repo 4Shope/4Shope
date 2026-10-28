@@ -284,3 +284,6 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 [data-theme="dark"] .category-card:not(.has-category-cover) .cat-icon .category-svg,
 [data-theme="dark"] .quick-chip .category-svg{color:var(--ink)!important}
 .icon-group:not([open]) .icon-options{display:none}
+
+/* Mobile: cabeçalho acompanha a página, sem cobrir fotos ao rolar. */
+@media(max-width:650px){.site-header{position:relative;top:auto;z-index:20}#produto .page-pad{padding-top:20px}#produto .back-link{display:inline-flex;margin-bottom:20px}#produto .detail-photo{scroll-margin-top:12px}}
