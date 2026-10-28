@@ -202,7 +202,7 @@ function carouselBlock(c){
  return '<section class="shop-carousel" aria-label="'+esc(c.name||'Carrossel')+'"><div class="shop-carousel-track">'+cells+'</div><div class="shop-carousel-controls"><button class="shop-carousel-prev" type="button" aria-label="Imagem anterior">‹</button><span class="shop-carousel-counter">1 / '+slides.length+'</span><button class="shop-carousel-next" type="button" aria-label="Próxima imagem">›</button></div></section>';
 }
 function renderExtraPromos(){
- const map={hero:'extraHeroPromos',mid:'extraMidPromos',bottom:'extraBottomPromos',product:'extraProductPromos',categories:'extraCategoryPromos'};
+ const map={hero:'extraHeroPromos',mid:'extraMidPromos',bottom:'extraBottomPromos',product:'extraProductPromos',detail:'extraDetailPromos',categories:'extraCategoryPromos'};
  for(const [place,id] of Object.entries(map)){
   const host=$(id);if(!host)continue;
   const items=[...(settings.partners||[]).filter(p=>p.placement===place&&p.active!==false).map(p=>({...p,kind:'partner'})),...(settings.carousels||[]).filter(c=>c.placement===place&&marketingVisible(c)).map(c=>({...c,kind:'carousel'}))].sort((a,b)=>(a.order||0)-(b.order||0));
