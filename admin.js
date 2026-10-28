@@ -22,12 +22,17 @@ $('productForm').onsubmit=async e=>{e.preventDefault();const id=$('pId').value;c
 $('productRows').onclick=async e=>{const view=e.target.closest('[data-view-p]');if(view){const p=products.find(x=>x.id===view.dataset.viewP);if(p){editProduct(p.id);previewProductDraft()}return}const edit=e.target.closest('[data-edit-p]');const del=e.target.closest('[data-del-p]');if(edit)editProduct(edit.dataset.editP);if(del&&confirm('Excluir definitivamente este produto?')){try{await removeProduct(del.dataset.delP);await refresh();say('Produto excluído.')}catch(err){console.error(err);say('Não foi possível excluir.',true)}}};
 function renderCategories(){const q=($('categorySearch')?.value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const visible=categories.filter(c=>c.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q));$('categoryRows').innerHTML=visible.length?visible.map(c=>`<div class="contact-row"><span>${(safeUrl(c.image)||safeUrl(c.imageDark))?`<img class="category-admin-thumb" src="${esc(safeUrl(c.image)||safeUrl(c.imageDark))}" alt="" loading="lazy">`:iconSVG(c.icon,c.name)} ${esc(c.name)}</span><span><button class="small-btn" data-edit-c="${esc(c.id)}">Editar</button><button class="small-btn danger" data-del-c="${esc(c.id)}">Excluir</button></span></div>`).join(''):'<p style="font-size:12px;color:var(--muted)">Cadastre suas primeiras categorias abaixo.</p>'}
 $('categorySearch').oninput=renderCategories;
-function renderCategoryIcons(){
+function renderCategoryIcons(openGroup=''){
  const chosen=resolveIcon($('cIcon').value,$('cName').value);
- $('categoryIconChoices').innerHTML=Object.entries(iconGroups).map(([group,icons],i)=>`<details class="icon-group" ${icons.includes(chosen)||(!icons.some(x=>x===chosen)&&i===0)?'open':''}><summary>${esc(group)} <span>${icons.length} ícones</span></summary><div class="icon-options">${icons.map(icon=>`<button type="button" class="icon-choice ${chosen===icon?'selected':''}" data-category-icon="${icon}" title="${icon}" aria-label="Escolher ícone ${icon}" aria-pressed="${chosen===icon}">${iconSVG(icon)}</button>`).join('')}</div></details>`).join('');
+ $('categoryIconChoices').innerHTML=Object.entries(iconGroups).map(([group,icons])=>`<details class="icon-group" ${openGroup===group?'open':''}><summary>${esc(group)} <span>${icons.length} ícones</span></summary><div class="icon-options">${icons.map(icon=>`<button type="button" class="icon-choice ${chosen===icon?'selected':''}" data-category-icon="${icon}" title="${icon}" aria-label="Escolher ícone ${icon}" aria-pressed="${chosen===icon}">${iconSVG(icon)}</button>`).join('')}</div></details>`).join('');
  $('selectedCategoryIcon').innerHTML=iconSVG(chosen);
 }
-$('categoryIconChoices').onclick=e=>{const b=e.target.closest('[data-category-icon]');if(!b)return;const open=b.closest('details')?.querySelector('summary')?.textContent.trim();$('cIcon').value=b.dataset.categoryIcon;renderCategoryIcons();if(open){const details=[...$('categoryIconChoices').querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent.trim()===open);if(details)details.open=true}};
+$('categoryIconChoices').onclick=e=>{
+ const b=e.target.closest('[data-category-icon]');if(!b)return;
+ const group=b.closest('details')?.querySelector('summary')?.firstChild?.textContent?.trim()||'';
+ $('cIcon').value=b.dataset.categoryIcon;
+ renderCategoryIcons(group);
+};
 $('cIcon').oninput=renderCategoryIcons;
 renderCategoryIcons();
 function clearCategory(){$('categoryForm').reset();$('cId').value='';$('categoryEditorTitle').textContent='Nova categoria';renderCategoryIcons()}$('cancelCategory').onclick=clearCategory;
