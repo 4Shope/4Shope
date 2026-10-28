@@ -225,17 +225,37 @@ function renderCarousels(){
  const q=field('carouselSearch').toLowerCase();
  listEditRows((settings.carousels||[]).filter(x=>(x.name||'').toLowerCase().includes(q)),'carouselRows','data-edit-carousel','data-del-carousel',c=>(c.name||'Sem nome')+' · '+(c.slides||[]).length+' imagens');
 }
+function normalizedProductQuery(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR')}
 function slideLine(slide={}){
  const row=document.createElement('div');row.className='carousel-slide-editor';
- const options='<option value="">Escolher destino</option><option value="#inicio">Início</option><option value="#produtos">Todos os produtos</option><option value="#categorias">Categorias</option>'+categories.map(c=>'<option value="#produtos?categoria='+esc(c.id)+'">Categoria: '+esc(c.name)+'</option>').join('')+products.map(p=>'<option value="#produto/'+esc(p.id)+'">Produto: '+esc(p.name)+'</option>').join('');
- row.innerHTML='<div class="carousel-slide-header"><strong>Imagem do carrossel</strong><button type="button" class="small-btn danger" data-remove-slide>Remover</button></div><label>Foto (URL)</label><input class="field" data-slide-image type="url" placeholder="https://..."><label>Foto para celular (opcional)</label><input class="field" data-slide-mobile type="url" placeholder="https://..."><label>Destino</label><select class="field" data-slide-choice>'+options+'</select><input class="field" data-slide-link placeholder="Ou cole um link, #produto/ID, #campanha/ID"><label>Texto alternativo (opcional)</label><input class="field" data-slide-alt maxlength="100">';
- row.querySelector('[data-slide-image]').value=slide.image||'';
- row.querySelector('[data-slide-mobile]').value=slide.mobileImage||'';
- row.querySelector('[data-slide-link]').value=slide.link||'';
- row.querySelector('[data-slide-alt]').value=slide.alt||'';
- row.querySelector('[data-slide-choice]').onchange=e=>{row.querySelector('[data-slide-link]').value=e.target.value};
+ const options='<option value="">Outro destino / link personalizado</option><option value="#inicio">Início</option><option value="#produtos">Todos os produtos</option><option value="#categorias">Categorias</option>'+categories.map(c=>'<option value="#produtos?categoria='+esc(c.id)+'">Categoria: '+esc(c.name)+'</option>').join('');
+ row.innerHTML='<div class="carousel-slide-header"><strong>Imagem do carrossel</strong><button type="button" class="small-btn danger" data-remove-slide>Remover</button></div><label>Foto (URL)</label><input class="field" data-slide-image type="url" placeholder="https://..."><label>Foto para celular (opcional)</label><input class="field" data-slide-mobile type="url" placeholder="https://..."><label>Destino geral</label><select class="field" data-slide-choice>'+options+'</select><label>Escolher UM produto para esta foto</label><input class="field" type="search" data-slide-product-search placeholder="🔎 Pesquisar produto pelo nome"><div class="marketing-choices slide-product-choices" data-slide-products></div><span class="admin-hint" data-slide-selection></span><label>Link personalizado (opcional)</label><input class="field" data-slide-link placeholder="https://... ou #campanha/ID"><label>Texto alternativo (opcional)</label><input class="field" data-slide-alt maxlength="100">';
+ for(const [selector,key] of [['[data-slide-image]','image'],['[data-slide-mobile]','mobileImage'],['[data-slide-link]','link'],['[data-slide-alt]','alt']])row.querySelector(selector).value=slide[key]||'';
+ const destination=row.querySelector('[data-slide-link]'),choice=row.querySelector('[data-slide-choice]'),list=row.querySelector('[data-slide-products]'),status=row.querySelector('[data-slide-selection]');
+ let selected=(slide.link||'').match(/^#produto\/([A-Za-z0-9_-]+)$/)?.[1]||'';
+ if(slide.link&&!selected&&[...choice.options].some(o=>o.value===slide.link))choice.value=slide.link;
+ const draw=()=>{
+  const q=normalizedProductQuery(row.querySelector('[data-slide-product-search]').value);
+  list.innerHTML=products.filter(p=>normalizedProductQuery(p.name).includes(q)).map(p=>'<label class="marketing-choice"><input type="checkbox" value="'+esc(p.id)+'" '+(p.id===selected?'checked':'')+'><span>'+esc(p.name)+(p.published===false?' (rascunho)':'')+'</span></label>').join('')||'<p class="admin-hint">Nenhum produto encontrado.</p>';
+  status.textContent=selected?'Selecionado: '+(products.find(p=>p.id===selected)?.name||selected):'Nenhum produto escolhido';
+ };
+ row.querySelector('[data-slide-product-search]').oninput=draw;
+ list.onchange=e=>{
+  if(!e.target.matches('input[type="checkbox"]'))return;
+  selected=e.target.checked?e.target.value:'';
+  if(selected){destination.value='#produto/'+selected;choice.value=''}
+  else if(destination.value.startsWith('#produto/'))destination.value='';
+  draw();
+ };
+ choice.onchange=()=>{selected='';destination.value=choice.value;draw()};
+ destination.oninput=()=>{
+  const match=destination.value.match(/^#produto\/([A-Za-z0-9_-]+)$/);
+  selected=match?match[1]:'';
+  choice.value=[...choice.options].some(o=>o.value===destination.value)?destination.value:'';
+  draw();
+ };
  row.querySelector('[data-remove-slide]').onclick=()=>row.remove();
- $('carouselSlides').append(row);
+ $('carouselSlides').append(row);draw();
 }
 function editCarousel(id){
  const c=(settings.carousels||[]).find(x=>x.id===id)||{};
@@ -270,12 +290,27 @@ function renderCoupons(){
  $('couponRows').querySelectorAll('[data-edit-coupon]').forEach(b=>{const confirm=document.createElement('button');confirm.type='button';confirm.className='small-btn';confirm.textContent='Confirmar resgate';confirm.dataset.confirmCoupon=b.dataset.editCoupon;b.parentElement.append(confirm)});
  $('couponHistory').innerHTML=(settings.couponHistory||[]).slice().reverse().map(h=>'<div class="contact-row"><span><strong>'+esc(h.code)+'</strong> · '+esc(h.customer||'Cliente não informado')+'<br><small>'+new Date(h.at).toLocaleString('pt-BR')+' · '+esc(h.productName||'')+'</small></span></div>').join('')||'<p class="admin-hint">Nenhum resgate confirmado.</p>';
 }
+function filterCouponProducts(){
+ const q=normalizedProductQuery($('couponProductSearch').value);
+ let n=0;
+ $('couponProductChoices').querySelectorAll('label.marketing-choice').forEach(label=>{
+  const chk=label.querySelector('input');if(chk.checked)n++;
+  const product=products.find(p=>p.id===chk.value);
+  label.hidden=!normalizedProductQuery(product?.name).includes(q);
+ });
+ $('couponSelectedCount').textContent=n+' produto(s) selecionado(s)'+(n===0?' · cupom aplicável a todos da categoria':'');
+}
+$('couponProductSearch').oninput=filterCouponProducts;
+$('couponProductChoices').onchange=filterCouponProducts;
 function editCoupon(id){
  const c=(settings.coupons||[]).find(x=>x.id===id)||{};
  $('couponForm').reset();$('couponEditor').classList.remove('hidden');
  $('couponCategory').innerHTML='<option value="">Todas as categorias</option>'+categories.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
- $('couponProduct').innerHTML='<option value="">Todos os produtos</option>'+products.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
- for(const [el,key] of [['couponId','id'],['couponCode','code'],['couponLimit','limit'],['couponCategory','categoryId'],['couponProduct','productId'],['couponMessage','message'],['couponStart','start'],['couponEnd','end']])$(el).value=c[key]??(key==='limit'?10:'');
+ const chosen=new Set(c.productIds|| (c.productId?[c.productId]:[]));
+ $('couponProductSearch').value='';
+ $('couponProductChoices').innerHTML=products.map(p=>'<label class="marketing-choice"><input type="checkbox" value="'+esc(p.id)+'" '+(chosen.has(p.id)?'checked':'')+'><span>'+esc(p.name)+(p.published===false?' (rascunho)':'')+'</span></label>').join('');
+ filterCouponProducts();
+ for(const [el,key] of [['couponId','id'],['couponCode','code'],['couponLimit','limit'],['couponCategory','categoryId'],['couponMessage','message'],['couponStart','start'],['couponEnd','end']])$(el).value=c[key]??(key==='limit'?10:'');
  $('couponActive').checked=c.active!==false;
  $('couponEditor').scrollIntoView({behavior:'smooth'});
 }
@@ -288,7 +323,7 @@ $('couponForm').onsubmit=async e=>{
  const limit=Number(field('couponLimit')),used=Number(old?.used||0);
  if(!/^[A-Z0-9_-]{3,30}$/.test(code)||!Number.isSafeInteger(limit)||limit<1||limit<used){say('Informe um código válido e limite igual ou maior que os resgates.',true);return}
  if((settings.coupons||[]).some(c=>c.id!==id&&c.code===code)){say('Este código já existe.',true);return}
- const c={id,code,limit,used,categoryId:field('couponCategory'),productId:field('couponProduct'),message:field('couponMessage').slice(0,500),start:field('couponStart'),end:field('couponEnd'),active:$('couponActive').checked};
+ const chosenIds=[...$('couponProductChoices').querySelectorAll('input:checked')].map(input=>input.value);const c={id,code,limit,used,categoryId:field('couponCategory'),productIds:chosenIds,productId:chosenIds.length===1?chosenIds[0]:'',message:field('couponMessage').slice(0,500),start:field('couponStart'),end:field('couponEnd'),active:$('couponActive').checked};
  if(c.start&&c.end&&c.start>c.end){say('Datas inválidas.',true);return}
  try{await persistMarketing({coupons:[...(settings.coupons||[]).filter(x=>x.id!==id),c]});$('couponEditor').classList.add('hidden');say('Cupom salvo.')}catch(err){console.error(err);say('Erro ao salvar cupom.',true)}
 };
