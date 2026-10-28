@@ -267,6 +267,7 @@ $('carouselRows').onclick=async e=>{
 };
 function renderCoupons(){
  listEditRows(settings.coupons||[],'couponRows','data-edit-coupon','data-del-coupon',c=>(c.code||'CUPOM')+' · '+Number(c.used||0)+'/'+Number(c.limit||0)+' confirmados');
+ $('couponRows').querySelectorAll('[data-edit-coupon]').forEach(b=>{const confirm=document.createElement('button');confirm.type='button';confirm.className='small-btn';confirm.textContent='Confirmar resgate';confirm.dataset.confirmCoupon=b.dataset.editCoupon;b.parentElement.append(confirm)});
  $('couponHistory').innerHTML=(settings.couponHistory||[]).slice().reverse().map(h=>'<div class="contact-row"><span><strong>'+esc(h.code)+'</strong> · '+esc(h.customer||'Cliente não informado')+'<br><small>'+new Date(h.at).toLocaleString('pt-BR')+' · '+esc(h.productName||'')+'</small></span></div>').join('')||'<p class="admin-hint">Nenhum resgate confirmado.</p>';
 }
 function editCoupon(id){
@@ -292,7 +293,8 @@ $('couponForm').onsubmit=async e=>{
  try{await persistMarketing({coupons:[...(settings.coupons||[]).filter(x=>x.id!==id),c]});$('couponEditor').classList.add('hidden');say('Cupom salvo.')}catch(err){console.error(err);say('Erro ao salvar cupom.',true)}
 };
 $('couponRows').onclick=async e=>{
- const edit=e.target.closest('[data-edit-coupon]'),del=e.target.closest('[data-del-coupon]');
+ const edit=e.target.closest('[data-edit-coupon]'),del=e.target.closest('[data-del-coupon]'),conf=e.target.closest('[data-confirm-coupon]');
+ if(conf){const c=(settings.coupons||[]).find(x=>x.id===conf.dataset.confirmCoupon);if(!c)return;if((c.used||0)>=c.limit){say('Esse cupom atingiu o limite.',true);return}const productName=prompt('Produto do resgate confirmado (opcional):','');if(productName===null)return;if(!confirm('Confirmar UM resgate de '+c.code+'? Faça isso apenas após receber e conferir a solicitação.'))return;const coupons=(settings.coupons||[]).map(x=>x.id===c.id?{...x,used:(Number(x.used)||0)+1}:x);const h={code:c.code,productName:productName.slice(0,120),at:Date.now()};try{await persistMarketing({coupons,couponHistory:[...(settings.couponHistory||[]),h].slice(-200)});say('Resgate confirmado e descontado.')}catch(err){console.error(err);say('Não foi possível confirmar resgate.',true)}return}
  if(edit){editCoupon(edit.dataset.editCoupon);return}
  if(del&&confirm('Excluir este cupom?')){await persistMarketing({coupons:(settings.coupons||[]).filter(x=>x.id!==del.dataset.delCoupon)});say('Cupom excluído.')}
 };
