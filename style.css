@@ -228,3 +228,23 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
  .promo-slide img{max-height:340px;object-fit:contain}
  .carousel-slide-editor{padding:10px}
 }
+
+/* Cupom compacto em etapas, logo depois de Favoritar e Compartilhar */
+.product-coupon-box{display:grid;gap:10px;padding:15px;border:1px solid var(--line);border-radius:14px;margin:15px 0;background:var(--surface)}
+.product-coupon-box [hidden]{display:none!important}
+.coupon-heading{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.coupon-heading strong{font-size:15px}
+.coupon-heading span{font-size:12px;color:var(--muted)}
+.coupon-entry-line{display:flex;gap:8px;align-items:center}
+.coupon-entry-line input{min-width:0;flex:1}
+.coupon-entry-line .small-btn{flex-shrink:0;min-height:42px}
+.coupon-identity{display:grid;gap:9px}
+.coupon-identity p,.coupon-feedback{font-size:12px;margin:0;color:var(--muted)}
+.coupon-identity label{font-size:12px;font-weight:600}
+.coupon-identity input{width:100%}
+.coupon-applied{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:7px}
+.coupon-up-arrow{font-size:28px;font-weight:700;color:var(--ink);line-height:1}
+.coupon-applied strong{font-size:15px}
+.coupon-applied span:not(.coupon-up-arrow){font-size:13px}
+.coupon-applied small{color:var(--muted);font-size:11px}
+.coupon-reset{border:0;background:none;text-decoration:underline;color:var(--ink);font-size:12px;padding:6px}
