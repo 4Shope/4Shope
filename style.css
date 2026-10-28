@@ -271,3 +271,16 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .marketing-banner-area .marketing-banner img{height:auto;max-height:none;aspect-ratio:auto;object-fit:contain}
 .campaign-cover{width:100%;max-width:100%;overflow:hidden}
 @media(max-width:650px){.extra-promos .campaign-free img,.extra-promos .marketing-banner img,.campaign-cover img{max-height:none}}
+
+/* Icones vetoriais de categorias acompanham o tema, sem usar cor fixa preta. */
+.category-card:not(.has-category-cover) .cat-icon,
+.category-card:not(.has-category-cover) .cat-icon .category-svg,
+.quick-chip .category-svg,
+.icon-choice .category-svg,
+.selected-category-icon .category-svg,
+.contact-row .category-svg{color:var(--ink);stroke:currentColor}
+.category-svg{stroke:currentColor}
+.category-card:not(.has-category-cover) .cat-icon .category-svg{color:var(--ink)!important}
+[data-theme="dark"] .category-card:not(.has-category-cover) .cat-icon .category-svg,
+[data-theme="dark"] .quick-chip .category-svg{color:var(--ink)!important}
+.icon-group:not([open]) .icon-options{display:none}
