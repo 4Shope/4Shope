@@ -104,7 +104,7 @@ function couponWhatsapp(p,c,name){
  return 'https://wa.me/'+number+'?text='+encodeURIComponent(msg);
 }
 function couponBox(p){
- const available=(settings.coupons||[]).some(c=>c.active!==false&&(c.used||0)<(c.limit||0)&&(!c.productId||c.productId===p.id)&&(!c.categoryId||productCategoryIds(p).includes(c.categoryId)));
+ const available=(settings.coupons||[]).some(c=>c.active!==false&&(c.used||0)<(c.limit||0)&&(!(Array.isArray(c.productIds)&&c.productIds.length)?(!c.productId||c.productId===p.id):c.productIds.includes(p.id))&&(!c.categoryId||productCategoryIds(p).includes(c.categoryId)));
  if(!available)return '';
  return '<div class="product-coupon-box"><strong>Tem cupom promocional?</strong><p>Informe seu código e nome para solicitar a promoção. O resgate depende de confirmação pelo WhatsApp.</p><label for="couponInput">Código do cupom</label><input id="couponInput" class="field" autocomplete="off" placeholder="Seu cupom"><label for="couponCustomer">Seu nome</label><input id="couponCustomer" class="field" maxlength="80" autocomplete="name" placeholder="Nome para identificação"><button type="button" id="applyProductCoupon" class="small-btn">Aplicar cupom</button><p id="couponFeedback" class="admin-hint" role="status"></p></div>';
 }
@@ -113,7 +113,7 @@ function connectCoupon(p){
  btn.onclick=()=>{
   const code=($('couponInput').value||'').trim().toUpperCase(),name=($('couponCustomer').value||'').trim();
   const note=$('couponFeedback'),today=new Date().toISOString().slice(0,10);
-  const c=(settings.coupons||[]).find(c=>c.code===code&&c.active!==false&&(!c.start||c.start<=today)&&(!c.end||c.end>=today)&&(!c.productId||c.productId===p.id)&&(!c.categoryId||productCategoryIds(p).includes(c.categoryId))&&(Number(c.used)||0)<Number(c.limit));
+  const c=(settings.coupons||[]).find(c=>c.code===code&&c.active!==false&&(!c.start||c.start<=today)&&(!c.end||c.end>=today)&&(!(Array.isArray(c.productIds)&&c.productIds.length)?(!c.productId||c.productId===p.id):c.productIds.includes(p.id))&&(!c.categoryId||productCategoryIds(p).includes(c.categoryId))&&(Number(c.used)||0)<Number(c.limit));
   if(!c){note.textContent='Cupom inválido, vencido, esgotado ou não aplicável a este produto.';return}
   if(name.length<2){note.textContent='Informe seu nome para se identificar ao solicitar a promoção.';return}
   const target=couponWhatsapp(p,c,name);
