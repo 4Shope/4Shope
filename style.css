@@ -260,3 +260,14 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .category-card.has-category-cover>div{padding:0}
 .category-admin-thumb{width:52px;height:52px;max-width:52px;max-height:52px;object-fit:contain;background:var(--soft);padding:4px}
 @media(max-width:650px){.category-card.has-category-cover{padding:14px;min-height:130px;gap:10px}.category-card.has-category-cover .cat-icon{width:54px;height:54px;flex-basis:54px}.category-admin-thumb{width:46px;height:46px}}
+
+/* Marketing com proporcoes livres: sem cortes nem limites arbitrarios */
+.extra-promos .campaign-free,.extra-promos .marketing-banner{display:block;width:100%;max-width:100%;min-width:0;overflow:hidden;border-radius:12px;background:var(--surface)}
+.extra-promos .campaign-free img,.extra-promos .marketing-banner img,
+.campaign-cover img{width:100%;height:auto;max-width:100%;max-height:none;aspect-ratio:auto;object-fit:contain;display:block}
+.extra-promos .campaign-free div{padding:12px 15px}
+.extra-promos .campaign-free strong{font-size:15px}
+.extra-promos .campaign-free p{margin:5px 0 0;color:var(--muted);font-size:12px}
+.marketing-banner-area .marketing-banner img{height:auto;max-height:none;aspect-ratio:auto;object-fit:contain}
+.campaign-cover{width:100%;max-width:100%;overflow:hidden}
+@media(max-width:650px){.extra-promos .campaign-free img,.extra-promos .marketing-banner img,.campaign-cover img{max-height:none}}
