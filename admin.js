@@ -213,7 +213,7 @@ $('cancelPartner').onclick=()=>$('partnerEditor').classList.add('hidden');
 $('partnerForm').onsubmit=async e=>{
  e.preventDefault();
  const p={id:field('partnerId')||makeId(),name:field('partnerName'),type:field('partnerType'),description:field('partnerDescription'),image:safeUrl(field('partnerImage')),link:field('partnerLink'),contact:field('partnerContact'),social:field('partnerSocial'),placement:field('partnerPlacement')||'mid',order:Number(field('partnerOrder'))||0,active:$('partnerActive').checked};
- if(!validOptionalUrl(field('partnerImage'))||!validDestination(p.link)||!validOptionalUrl(p.social)){say('Confira os links da parceria.',true);return}
+ if(!validOptionalUrl(field('partnerImage'))||!validCarouselLink(p.link)||!validOptionalUrl(p.social)){say('Confira os links da parceria.',true);return}
  try{await persistMarketing({partners:[...(settings.partners||[]).filter(x=>x.id!==p.id),p]});$('partnerEditor').classList.add('hidden');say('Parceria salva.')}catch(err){console.error(err);say('Erro ao salvar parceria.',true)}
 };
 $('partnerRows').onclick=async e=>{
