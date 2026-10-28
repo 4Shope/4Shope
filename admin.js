@@ -8,10 +8,10 @@ if(!configured){$('configNotice').classList.remove('hidden');$('loginForm').quer
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='';try{await login($('email').value,$('password').value)}catch(err){console.error('Erro de autenticação:',err);$('loginError').textContent=`Não foi possível autenticar: ${err?.code||err?.message||'erro desconhecido'}.`}};
 if(configured)onAuth(async user=>{if(!user){$('loginView').classList.remove('hidden');$('adminView').classList.add('hidden');return}$('loginError').textContent='';$('loginView').classList.add('hidden');$('adminView').classList.remove('hidden');try{await refresh()}catch(err){console.error('Autenticação OK; falha ao carregar dados do painel:',err);const code=err?.code||err?.message||'erro desconhecido';say(`Login realizado, mas não foi possível carregar os dados: ${code}. Confira as regras do Firestore.`,true);let warning=$('adminLoadError');if(!warning){warning=document.createElement('div');warning.id='adminLoadError';warning.setAttribute('role','alert');warning.style.cssText='padding:14px;margin:12px 0;border:1px solid #c44;border-radius:8px;color:#c44;white-space:normal';$('adminView').prepend(warning)}warning.textContent=`Sua conta entrou, mas a leitura do Firestore falhou (${code}). Os produtos não foram alterados. Recarregue a página para tentar novamente.`}});
 $('logoutBtn').onclick=()=>logout();
-function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Estatísticas e visitas',settings:'Minha loja'})[name]||'Painel'}
+function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Estatísticas e visitas',settings:'Minha loja',partners:'Parcerias',carousels:'Carrosséis',coupons:'Cupons'})[name]||'Painel'}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 document.querySelectorAll('.admin-quick-actions [data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
-async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));settings={...initialSettings,...(d.settings||{})};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;$('statDrafts').textContent=products.filter(p=>!p.published).length;$('statFeatured').textContent=products.filter(p=>p.featured).length;$('statMissingLinks').textContent=products.filter(p=>!safeUrl(p.affiliateUrl)).length;renderProducts();renderCategories();renderSettings();renderMarketing()}
+async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));settings={...initialSettings,...(d.settings||{})};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;$('statDrafts').textContent=products.filter(p=>!p.published).length;$('statFeatured').textContent=products.filter(p=>p.featured).length;$('statMissingLinks').textContent=products.filter(p=>!safeUrl(p.affiliateUrl)).length;renderProducts();renderCategories();renderSettings();renderMarketing();renderPartners();renderCarousels();renderCoupons()}
 function renderProducts(){const q=($('adminProductSearch').value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),filter=$('adminProductFilter').value;const visible=products.filter(p=>p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q)&&(filter==='all'||filter==='published'&&p.published||filter==='draft'&&!p.published||filter==='featured'&&p.featured||filter==='missing'&&!safeUrl(p.affiliateUrl)));$('adminProductCount').textContent=visible.length+' de '+products.length+' produtos';$('productRows').innerHTML=visible.length?visible.map(p=>`<tr><td><img class="table-thumb" src="${esc(safeUrl(p.images?.[0])||'product-placeholder.svg')}" onerror="this.src='product-placeholder.svg'" alt=""></td><td>${esc(p.name)}</td><td>${currency(p.price)}</td><td>${p.published?'Publicado':'Rascunho'}</td><td><button class="small-btn" data-view-p="${esc(p.id)}">Prévia</button><button class="small-btn" data-edit-p="${esc(p.id)}">Editar</button><button class="small-btn danger" data-del-p="${esc(p.id)}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto cadastrado ainda.</td></tr>';$('pCategories').innerHTML=categories.map(c=>`<label class="checkline"><input type="checkbox" name="productCategories" value="${esc(c.id)}"> ${esc(c.name)}</label>`).join('');renderAdminTools()}
 $('adminProductSearch').oninput=renderProducts;$('adminProductFilter').onchange=renderProducts;
 function previewProductDraft(){const name=$('pName').value.trim()||'Nome do produto',price=$('pPrice').value,desc=$('pDescription').value.trim(),url=$('pImages').value.split('\n').map(x=>x.trim()).find(safeUrl);const box=$('productAdminPreview');box.classList.remove('hidden');box.innerHTML=`<div class="draft-preview-card"><img src="${esc(safeUrl(url)||'product-placeholder.svg')}" alt="Prévia" onerror="this.src='product-placeholder.svg'"><div><small>PRÉVIA ANTES DE PUBLICAR</small><h3>${esc(name)}</h3>${price?`<p>A partir de <strong>${currency(Number(price))}</strong></p>`:'<p>Preço não informado</p>'}<p>${esc(desc.slice(0,240)||'Adicione uma descrição para apresentar melhor o produto.')}</p><span class="small-btn">Ver detalhes e comprar ↗</span></div></div>`}
@@ -187,3 +187,113 @@ $('analyticsPeriod').onchange=refreshAnalytics;
 document.querySelectorAll('[data-tab="analytics"]').forEach(b=>b.addEventListener('click',refreshAnalytics));
 
 initAdminTools({products:()=>products,categories:()=>categories,refresh,say,edit:editProduct});
+
+
+/* Central de parcerias, carrosseis e cupons */
+function listEditRows(items,container,editAttr,removeAttr,label){
+ $(container).innerHTML=items.length?items.map(x=>'<div class="contact-row"><span><strong>'+esc(label(x))+'</strong><br><small>'+esc(x.placement||x.type||'')+(x.active===false?' · Oculto':'')+'</small></span><span><button type="button" class="small-btn" '+editAttr+'="'+esc(x.id)+'">Editar</button> <button type="button" class="small-btn danger" '+removeAttr+'="'+esc(x.id)+'">Excluir</button></span></div>').join(''):'<p class="admin-hint">Nenhum cadastro ainda.</p>';
+}
+const makeId=()=> 'item_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+const field=id=>$(id).value.trim();
+const validOptionalUrl=v=>!v||!!safeUrl(v);
+function renderPartners(){
+ const q=(field('partnerSearch')||'').toLowerCase();
+ listEditRows((settings.partners||[]).filter(p=>(p.name||'').toLowerCase().includes(q)),'partnerRows','data-edit-partner','data-del-partner',p=>p.name||'Parceria sem nome');
+}
+function editPartner(id){
+ const p=(settings.partners||[]).find(x=>x.id===id)||{};
+ $('partnerForm').reset();$('partnerEditor').classList.remove('hidden');
+ for(const [el,key] of [['partnerId','id'],['partnerName','name'],['partnerType','type'],['partnerDescription','description'],['partnerImage','image'],['partnerLink','link'],['partnerContact','contact'],['partnerSocial','social'],['partnerPlacement','placement'],['partnerOrder','order']])$(el).value=p[key]??(key==='order'?10:'');
+ $('partnerActive').checked=p.active!==false;
+ $('partnerEditor').scrollIntoView({behavior:'smooth'});
+}
+$('partnerSearch').oninput=renderPartners;
+$('newPartner').onclick=()=>editPartner();
+$('cancelPartner').onclick=()=>$('partnerEditor').classList.add('hidden');
+$('partnerForm').onsubmit=async e=>{
+ e.preventDefault();
+ const p={id:field('partnerId')||makeId(),name:field('partnerName'),type:field('partnerType'),description:field('partnerDescription'),image:safeUrl(field('partnerImage')),link:field('partnerLink'),contact:field('partnerContact'),social:field('partnerSocial'),placement:field('partnerPlacement')||'mid',order:Number(field('partnerOrder'))||0,active:$('partnerActive').checked};
+ if(!validOptionalUrl(field('partnerImage'))||!validDestination(p.link)||!validOptionalUrl(p.social)){say('Confira os links da parceria.',true);return}
+ try{await persistMarketing({partners:[...(settings.partners||[]).filter(x=>x.id!==p.id),p]});$('partnerEditor').classList.add('hidden');say('Parceria salva.')}catch(err){console.error(err);say('Erro ao salvar parceria.',true)}
+};
+$('partnerRows').onclick=async e=>{
+ const edit=e.target.closest('[data-edit-partner]'),del=e.target.closest('[data-del-partner]');
+ if(edit)editPartner(edit.dataset.editPartner);
+ if(del&&confirm('Excluir esta parceria?')){await persistMarketing({partners:(settings.partners||[]).filter(x=>x.id!==del.dataset.delPartner)});say('Parceria excluída.')}
+};
+function renderCarousels(){
+ const q=field('carouselSearch').toLowerCase();
+ listEditRows((settings.carousels||[]).filter(x=>(x.name||'').toLowerCase().includes(q)),'carouselRows','data-edit-carousel','data-del-carousel',c=>(c.name||'Sem nome')+' · '+(c.slides||[]).length+' imagens');
+}
+function slideLine(slide={}){
+ const row=document.createElement('div');row.className='carousel-slide-editor';
+ const options='<option value="">Escolher destino</option><option value="#inicio">Início</option><option value="#produtos">Todos os produtos</option><option value="#categorias">Categorias</option>'+categories.map(c=>'<option value="#produtos?categoria='+esc(c.id)+'">Categoria: '+esc(c.name)+'</option>').join('')+products.map(p=>'<option value="#produto/'+esc(p.id)+'">Produto: '+esc(p.name)+'</option>').join('');
+ row.innerHTML='<div class="carousel-slide-header"><strong>Imagem do carrossel</strong><button type="button" class="small-btn danger" data-remove-slide>Remover</button></div><label>Foto (URL)</label><input class="field" data-slide-image type="url" placeholder="https://..."><label>Foto para celular (opcional)</label><input class="field" data-slide-mobile type="url" placeholder="https://..."><label>Destino</label><select class="field" data-slide-choice>'+options+'</select><input class="field" data-slide-link placeholder="Ou cole um link, #produto/ID, #campanha/ID"><label>Texto alternativo (opcional)</label><input class="field" data-slide-alt maxlength="100">';
+ row.querySelector('[data-slide-image]').value=slide.image||'';
+ row.querySelector('[data-slide-mobile]').value=slide.mobileImage||'';
+ row.querySelector('[data-slide-link]').value=slide.link||'';
+ row.querySelector('[data-slide-alt]').value=slide.alt||'';
+ row.querySelector('[data-slide-choice]').onchange=e=>{row.querySelector('[data-slide-link]').value=e.target.value};
+ row.querySelector('[data-remove-slide]').onclick=()=>row.remove();
+ $('carouselSlides').append(row);
+}
+function editCarousel(id){
+ const c=(settings.carousels||[]).find(x=>x.id===id)||{};
+ $('carouselForm').reset();$('carouselEditor').classList.remove('hidden');
+ for(const [el,key] of [['carouselId','id'],['carouselName','name'],['carouselPlacement','placement'],['carouselOrder','order'],['carouselStart','start'],['carouselEnd','end']])$(el).value=c[key]??(key==='order'?10:'');
+ $('carouselActive').checked=c.active!==false;
+ $('carouselSlides').replaceChildren();
+ (c.slides||[{}]).forEach(slideLine);
+ $('carouselEditor').scrollIntoView({behavior:'smooth'});
+}
+$('carouselSearch').oninput=renderCarousels;
+$('newCarousel').onclick=()=>editCarousel();
+$('cancelCarousel').onclick=()=>$('carouselEditor').classList.add('hidden');
+$('addCarouselSlide').onclick=()=>slideLine();
+$('carouselForm').onsubmit=async e=>{
+ e.preventDefault();
+ const slides=[...$('carouselSlides').children].map(row=>({image:fieldFrom(row,'[data-slide-image]'),mobileImage:fieldFrom(row,'[data-slide-mobile]'),link:fieldFrom(row,'[data-slide-link]'),alt:fieldFrom(row,'[data-slide-alt]')})).filter(x=>x.image);
+ if(!slides.length||slides.length>15||slides.some(x=>!safeUrl(x.image)||!validOptionalUrl(x.mobileImage)||!validCarouselLink(x.link))){say('Cadastre de 1 a 15 imagens e confira os links.',true);return}
+ const c={id:field('carouselId')||makeId(),name:field('carouselName')||'Carrossel',placement:field('carouselPlacement')||'hero',order:Number(field('carouselOrder'))||0,start:field('carouselStart'),end:field('carouselEnd'),active:$('carouselActive').checked,slides};
+ if(c.start&&c.end&&c.start>c.end){say('Confira as datas.',true);return}
+ try{await persistMarketing({carousels:[...(settings.carousels||[]).filter(x=>x.id!==c.id),c]});$('carouselEditor').classList.add('hidden');say('Carrossel salvo.')}catch(err){console.error(err);say('Erro ao salvar carrossel.',true)}
+};
+const fieldFrom=(row,selector)=>row.querySelector(selector)?.value.trim()||'';
+function validCarouselLink(v){return !v||!!safeUrl(v)||/^#(?:produto|campanha)\/[A-Za-z0-9_-]+$/.test(v)||['#inicio','#produtos','#categorias'].includes(v)||/^#produtos\?categoria=[A-Za-z0-9_-]+$/.test(v)}
+$('carouselRows').onclick=async e=>{
+ const edit=e.target.closest('[data-edit-carousel]'),del=e.target.closest('[data-del-carousel]');
+ if(edit)editCarousel(edit.dataset.editCarousel);
+ if(del&&confirm('Excluir o carrossel?')){await persistMarketing({carousels:(settings.carousels||[]).filter(x=>x.id!==del.dataset.delCarousel)});say('Carrossel excluído.')}
+};
+function renderCoupons(){
+ listEditRows(settings.coupons||[],'couponRows','data-edit-coupon','data-del-coupon',c=>(c.code||'CUPOM')+' · '+Number(c.used||0)+'/'+Number(c.limit||0)+' confirmados');
+ $('couponHistory').innerHTML=(settings.couponHistory||[]).slice().reverse().map(h=>'<div class="contact-row"><span><strong>'+esc(h.code)+'</strong> · '+esc(h.customer||'Cliente não informado')+'<br><small>'+new Date(h.at).toLocaleString('pt-BR')+' · '+esc(h.productName||'')+'</small></span></div>').join('')||'<p class="admin-hint">Nenhum resgate confirmado.</p>';
+}
+function editCoupon(id){
+ const c=(settings.coupons||[]).find(x=>x.id===id)||{};
+ $('couponForm').reset();$('couponEditor').classList.remove('hidden');
+ $('couponCategory').innerHTML='<option value="">Todas as categorias</option>'+categories.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
+ $('couponProduct').innerHTML='<option value="">Todos os produtos</option>'+products.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
+ for(const [el,key] of [['couponId','id'],['couponCode','code'],['couponLimit','limit'],['couponCategory','categoryId'],['couponProduct','productId'],['couponMessage','message'],['couponStart','start'],['couponEnd','end']])$(el).value=c[key]??(key==='limit'?10:'');
+ $('couponActive').checked=c.active!==false;
+ $('couponEditor').scrollIntoView({behavior:'smooth'});
+}
+$('newCoupon').onclick=()=>editCoupon();
+$('cancelCoupon').onclick=()=>$('couponEditor').classList.add('hidden');
+$('couponForm').onsubmit=async e=>{
+ e.preventDefault();
+ const id=field('couponId')||makeId(),old=(settings.coupons||[]).find(x=>x.id===id);
+ const code=field('couponCode').toUpperCase().replace(/\s/g,'');
+ const limit=Number(field('couponLimit')),used=Number(old?.used||0);
+ if(!/^[A-Z0-9_-]{3,30}$/.test(code)||!Number.isSafeInteger(limit)||limit<1||limit<used){say('Informe um código válido e limite igual ou maior que os resgates.',true);return}
+ if((settings.coupons||[]).some(c=>c.id!==id&&c.code===code)){say('Este código já existe.',true);return}
+ const c={id,code,limit,used,categoryId:field('couponCategory'),productId:field('couponProduct'),message:field('couponMessage').slice(0,500),start:field('couponStart'),end:field('couponEnd'),active:$('couponActive').checked};
+ if(c.start&&c.end&&c.start>c.end){say('Datas inválidas.',true);return}
+ try{await persistMarketing({coupons:[...(settings.coupons||[]).filter(x=>x.id!==id),c]});$('couponEditor').classList.add('hidden');say('Cupom salvo.')}catch(err){console.error(err);say('Erro ao salvar cupom.',true)}
+};
+$('couponRows').onclick=async e=>{
+ const edit=e.target.closest('[data-edit-coupon]'),del=e.target.closest('[data-del-coupon]');
+ if(edit){editCoupon(edit.dataset.editCoupon);return}
+ if(del&&confirm('Excluir este cupom?')){await persistMarketing({coupons:(settings.coupons||[]).filter(x=>x.id!==del.dataset.delCoupon)});say('Cupom excluído.')}
+};
+$('clearCouponHistory').onclick=async()=>{if(!confirm('Excluir todo o histórico de resgates confirmados? Os totais utilizados serão preservados.'))return;await persistMarketing({couponHistory:[]});say('Histórico apagado.')};
