@@ -245,20 +245,25 @@ function campaignMarkup(c){
  return '<a class="campaign-tile campaign-free" href="#campanha/'+encodeURIComponent(c.id)+'">'+img+(details?'<div>'+details+'</div>':'')+'</a>';
 }
 function renderExtraPromos(){
- const map={top:'extraTopPromos',aboveProducts:'extraAboveProductsPromos',catalogTop:'extraCatalogTopPromos',categoriesTop:'extraCategoriesTopPromos',detailTop:'extraDetailTopPromos',hero:'extraHeroPromos',mid:'extraMidPromos',bottom:'extraBottomPromos',product:'extraProductPromos',detail:'extraDetailPromos',categories:'extraCategoryPromos'};
+ // 'hero' era chamado de topo no painel antigo, mas aparecia apos os produtos.
+ // Mapear o valor antigo para o topo real preserva campanhas ja cadastradas.
+ const map={top:'extraTopPromos',aboveProducts:'extraAboveProductsPromos',catalogTop:'extraCatalogTopPromos',categoriesTop:'extraCategoriesTopPromos',detailTop:'extraDetailTopPromos',mid:'extraMidPromos',bottom:'extraBottomPromos',product:'extraProductPromos',detail:'extraDetailPromos',categories:'extraCategoryPromos'};
+ const placement=x=>x==='hero'?'top':x;
  const banners=(settings.marketingBanners||[]).filter(marketingVisible);
  const campaigns=(settings.campaigns||[]).filter(marketingVisible);
  for(const [place,id] of Object.entries(map)){
   const host=$(id);if(!host)continue;
   const items=[
-   ...(settings.partners||[]).filter(p=>p.placement===place&&p.active!==false).map(p=>({...p,kind:'partner'})),
-   ...(settings.carousels||[]).filter(c=>c.placement===place&&marketingVisible(c)).map(c=>({...c,kind:'carousel'})),
-   ...banners.filter(b=>b.placement===place).map(x=>({...x,kind:'banner'})),
-   ...campaigns.filter(c=>(c.placement||'bottom')===place).map(x=>({...x,kind:'campaign'}))
+   ...(settings.partners||[]).filter(p=>placement(p.placement)===place&&p.active!==false).map(p=>({...p,kind:'partner'})),
+   ...(settings.carousels||[]).filter(c=>placement(c.placement)===place&&marketingVisible(c)).map(c=>({...c,kind:'carousel'})),
+   ...banners.filter(b=>placement(b.placement)===place).map(x=>({...x,kind:'banner'})),
+   ...campaigns.filter(c=>placement(c.placement||'bottom')===place).map(x=>({...x,kind:'campaign'}))
   ].sort((x,y)=>(x.order||0)-(y.order||0));
   host.innerHTML=items.map(x=>x.kind==='partner'?promotionBlock(x):x.kind==='carousel'?carouselBlock(x):x.kind==='banner'?bannerMarkup(x):campaignMarkup(x)).join('');
  }
+ if($('extraHeroPromos'))$('extraHeroPromos').replaceChildren();
 }
+
 document.addEventListener('click',e=>{
  const cat=e.target.closest('[data-promo-category]');
  if(cat){e.preventDefault();const value=cat.dataset.promoCategory;if($('categoryFilter')){$('categoryFilter').value=value;term='';$('searchInput').value='';catalogPage=1;renderCatalog();}if(location.hash!=='#produtos')location.hash='#produtos';else navigate();return}
