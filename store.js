@@ -262,11 +262,7 @@ function renderExtraPromos(){
 document.addEventListener('click',e=>{
  const cat=e.target.closest('[data-promo-category]');
  if(cat){e.preventDefault();const value=cat.dataset.promoCategory;if($('categoryFilter')){$('categoryFilter').value=value;term='';$('searchInput').value='';catalogPage=1;renderCatalog();}if(location.hash!=='#produtos')location.hash='#produtos';else navigate();return}
- const btn=e.target.closest('.shop-carousel-prev,.shop-carousel-next');if(!btn)return;
- const root=btn.closest('.shop-carousel'),track=root?.querySelector('.shop-carousel-track');if(!track)return;
- const slides=[...track.children],current=Math.round(track.scrollLeft/Math.max(1,track.clientWidth));
- const next=btn.classList.contains('shop-carousel-next')?Math.min(slides.length-1,current+1):Math.max(0,current-1);
- track.scrollTo({left:next*track.clientWidth,behavior:'smooth'});
+
 });
 
 const carouselTimers=new Map();
