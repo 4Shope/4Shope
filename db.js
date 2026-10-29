@@ -109,11 +109,11 @@ export const logout=()=>api.signOut(auth);
 export const onAuth=(cb)=>
   api.onAuthStateChanged(auth,cb);
 
-export async function saveProduct(data,id){
+export async function saveProduct(data,id,create=false){
   if(id){
-    return api.updateDoc(api.doc(db,'products',id),data);
+    const ref=api.doc(db,'products',id);
+    return create?api.setDoc(ref,data):api.updateDoc(ref,data);
   }
-
   return api.addDoc(api.collection(db,'products'),data);
 }
 
