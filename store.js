@@ -236,7 +236,7 @@ function carouselBlock(c){
   return '<div class="promo-slide">'+(dest?'<a href="'+esc(dest)+'"'+cat+(dest.startsWith('#')?'':' target="_blank" rel="noopener noreferrer sponsored"')+'>'+picture+'</a>':picture)+'</div>';
  }).join('');
  const dots=slides.map((_,i)=>'<button class="shop-carousel-dot'+(i===0?' active':'')+'" type="button" data-slide-index="'+i+'" aria-label="Ir para imagem '+(i+1)+'" aria-current="'+(i===0?'true':'false')+'"></button>').join('');
- return '<section class="shop-carousel" aria-label="'+esc(c.name||'Carrossel')+'"><div class="shop-carousel-track">'+cells+'</div><div class="shop-carousel-controls"><button class="shop-carousel-prev" type="button" aria-label="Imagem anterior">‹</button><div class="shop-carousel-dots">'+dots+'</div><button class="shop-carousel-next" type="button" aria-label="Próxima imagem">›</button></div></section>';
+ return '<section class="shop-carousel" aria-label="'+esc(c.name||'Carrossel')+'"><div class="shop-carousel-track">'+cells+'</div><div class="shop-carousel-controls"><div class="shop-carousel-dots">'+dots+'</div></div></section>';
 }
 function campaignMarkup(c){
  const img=safeUrl(c.image)?image(c.image,c.name||'Campanha 4Shope','loading="lazy" decoding="async"'):'';
@@ -277,8 +277,6 @@ function setupPromoCarousels(){
   const goto=i=>{current=(i+count)%count;track.scrollTo({left:current*track.clientWidth,behavior:'smooth'});dots.forEach((d,j)=>{d.classList.toggle('active',j===current);d.setAttribute('aria-current',String(j===current))})};
   const stop=()=>{clearInterval(timer);carouselTimers.delete(root)};
   const start=()=>{stop();if(!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches){timer=setInterval(()=>{if(root.isConnected&&root.getClientRects().length)goto(current+1)},5000);carouselTimers.set(root,timer)}};
-  root.querySelector('.shop-carousel-prev').onclick=()=>{goto(current-1);start()};
-  root.querySelector('.shop-carousel-next').onclick=()=>{goto(current+1);start()};
   dots.forEach((d,i)=>d.onclick=()=>{goto(i);start()});
   track.addEventListener('scroll',()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(sync,120)},{passive:true});
   track.addEventListener('pointerdown',stop,{passive:true});
