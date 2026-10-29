@@ -298,3 +298,12 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .shop-carousel-controls[hidden]{display:none!important}
 .extra-top-promos{margin-top:12px;margin-bottom:18px}
 @media(max-width:650px){.shop-carousel-dots{gap:8px}.shop-carousel-dot{width:9px;height:9px}.extra-top-promos{margin-top:6px}}
+
+/* Navegação discreta: uma fileira fixa de bolinhas, sem setas. */
+.shop-carousel .shop-carousel-controls{display:flex;align-items:center;justify-content:center;padding:11px 10px 13px;gap:0;width:100%;overflow:hidden}
+.shop-carousel .shop-carousel-dots{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:9px;white-space:nowrap;width:max-content;max-width:100%;min-width:0;min-height:22px;padding:3px 2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.shop-carousel .shop-carousel-dots::-webkit-scrollbar{display:none}
+.shop-carousel .shop-carousel-controls .shop-carousel-dot{appearance:none;display:block;flex:0 0 10px;box-sizing:border-box;width:10px;height:10px;min-width:10px;min-height:10px;padding:0;margin:0;border:0!important;border-radius:50%;background:var(--muted);opacity:.35;box-shadow:none;color:transparent;font-size:0;transition:background-color .2s,opacity .2s,transform .2s}
+.shop-carousel .shop-carousel-controls .shop-carousel-dot.active{background:var(--ink);opacity:1;transform:scale(1.15)}
+.shop-carousel .shop-carousel-controls .shop-carousel-dot:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media(max-width:650px){.shop-carousel .shop-carousel-dots{gap:8px}.shop-carousel .shop-carousel-controls .shop-carousel-dot{flex-basis:9px;width:9px;height:9px;min-width:9px;min-height:9px}}
