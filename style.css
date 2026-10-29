@@ -307,3 +307,16 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .shop-carousel .shop-carousel-controls .shop-carousel-dot.active{background:var(--ink);opacity:1;transform:scale(1.15)}
 .shop-carousel .shop-carousel-controls .shop-carousel-dot:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 @media(max-width:650px){.shop-carousel .shop-carousel-dots{gap:8px}.shop-carousel .shop-carousel-controls .shop-carousel-dot{flex-basis:9px;width:9px;height:9px;min-width:9px;min-height:9px}}
+
+/* Ajustes de ritmo visual no inicio mobile, sem alterar produtos e propagandas. */
+@media(max-width:650px){
+ #inicio .extra-top-promos:empty,#inicio .extra-promos:empty{display:none}
+ #inicio .shopping-first{padding-top:14px}
+ #inicio .shopping-intro{padding:0 0 8px;gap:12px}
+ #inicio .shopping-intro h1{margin:6px 0 8px}
+ #inicio .shopping-first .section-head{margin-top:14px;margin-bottom:12px}
+ #inicio .shopping-first .quick-categories{margin:8px 0 14px}
+ #inicio .popular-section{margin-top:26px}
+ #inicio .home-brand-zone{margin-top:26px}
+ #inicio .extra-top-promos{margin-top:8px;margin-bottom:15px}
+}
