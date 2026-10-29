@@ -219,7 +219,7 @@ function renderPartners(){
 function editPartner(id){
  const p=(settings.partners||[]).find(x=>x.id===id)||{};
  $('partnerForm').reset();$('partnerEditor').classList.remove('hidden');
- for(const [el,key] of [['partnerId','id'],['partnerName','name'],['partnerType','type'],['partnerDescription','description'],['partnerImage','image'],['partnerLink','link'],['partnerContact','contact'],['partnerSocial','social'],['partnerPlacement','placement'],['partnerOrder','order']])$(el).value=p[key]??(key==='order'?10:'');
+ for(const [el,key] of [['partnerId','id'],['partnerName','name'],['partnerType','type'],['partnerDescription','description'],['partnerImage','image'],['partnerLink','link'],['partnerContact','contact'],['partnerSocial','social'],['partnerPlacement','placement'],['partnerOrder','order']])$(el).value=(key==='placement'&&p[key]==='hero'?'top':p[key])??(key==='order'?10:'');
  $('partnerActive').checked=p.active!==false;
  $('partnerEditor').scrollIntoView({behavior:'smooth'});
 }
@@ -276,7 +276,7 @@ function slideLine(slide={}){
 function editCarousel(id){
  const c=(settings.carousels||[]).find(x=>x.id===id)||{};
  $('carouselForm').reset();$('carouselEditor').classList.remove('hidden');
- for(const [el,key] of [['carouselId','id'],['carouselName','name'],['carouselPlacement','placement'],['carouselOrder','order'],['carouselStart','start'],['carouselEnd','end']])$(el).value=c[key]??(key==='order'?10:'');
+ for(const [el,key] of [['carouselId','id'],['carouselName','name'],['carouselPlacement','placement'],['carouselOrder','order'],['carouselStart','start'],['carouselEnd','end']])$(el).value=(key==='placement'&&c[key]==='hero'?'top':c[key])??(key==='order'?10:'');
  $('carouselActive').checked=c.active!==false;
  $('carouselSlides').replaceChildren();
  (c.slides||[{}]).forEach(slideLine);
