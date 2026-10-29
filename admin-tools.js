@@ -1,4 +1,4 @@
-import {saveProduct,updateProductsBulk} from './db.js';
+import {saveProduct,removeProduct,updateProductsBulk} from './db.js';
 import {safeUrl,escapeHTML as esc} from './data.js';
 let api,selection=new Set(),page=1,size=10,busy=false;
 const $=id=>document.getElementById(id);
@@ -13,7 +13,7 @@ function build(){
  const bar=document.createElement('div');bar.className='product-tools';bar.innerHTML=
  '<div class="product-tool-filters"><input class="field" id="productSearch" type="search" placeholder="Buscar produto, descrição ou categoria"><select class="field" id="productCategoryFilter"><option value="">Todas as categorias</option></select><select class="field" id="productStatusFilter"><option value="">Todos os status</option><option value="published">Publicados</option><option value="draft">Rascunhos</option></select><select class="field" id="productSort"><option value="new">Mais recentes</option><option value="name">Nome A-Z</option><option value="priceAsc">Menor preço</option><option value="priceDesc">Maior preço</option></select><select class="field" id="productSize"><option value="10">10 por página</option><option value="25">25 por página</option><option value="50">50 por página</option></select></div>'+
  '<div class="product-tool-actions"><span id="selectionCount">0 selecionados</span><select class="field" id="bulkAction"><option value="">Ação em massa</option><option value="publish">Publicar</option><option value="draft">Ocultar</option><option value="featured">Destacar</option><option value="unfeatured">Remover destaque</option><option value="category">Adicionar categoria</option></select><select class="field hidden" id="bulkCategory"></select><button class="small-btn" type="button" id="applyBulk">Aplicar</button><button class="small-btn" type="button" id="clearSelection">Limpar seleção</button></div>'+
- '<div class="product-tool-actions"><button class="small-btn" type="button" id="exportCsv">Exportar backup CSV</button><label class="small-btn" for="importCsv">Importar CSV</label><input class="hidden" type="file" id="importCsv" accept=".csv,text/csv"><button class="small-btn" type="button" id="verifyLinks">Verificar links</button></div><div id="toolReport" class="product-tool-report hidden" role="status"></div>';
+ '<div class="product-tool-actions"><button class="small-btn" type="button" id="exportCsv">Exportar backup CSV</button><label class="small-btn" for="importCsv">Importar CSV</label><input class="hidden" type="file" id="importCsv" accept=".csv,text/csv"><button class="small-btn" type="button" id="verifyLinks">Verificar links</button><button class="small-btn" type="button" id="verifyDuplicates">Verificar duplicações</button></div><div id="toolReport" class="product-tool-report hidden" role="status"></div>';
  card.insertBefore(bar,table.parentElement);
  const nav=document.createElement('div');nav.className='product-tool-pager';nav.innerHTML='<span id="productPageInfo"></span><div><button class="small-btn" type="button" id="prevProducts">Anterior</button> <button class="small-btn" type="button" id="nextProducts">Próxima</button></div>';table.parentElement.after(nav);
  for(const id of ['productSearch','productCategoryFilter','productStatusFilter','productSort','productSize'])$(id).addEventListener(id==='productSearch'?'input':'change',()=>{page=1;renderAdminTools()});
@@ -27,6 +27,7 @@ function build(){
  $('exportCsv').onclick=exportCsv;
  $('importCsv').onchange=e=>{const f=e.target.files[0];if(f)importCsv(f).catch(err=>api.say('Erro na importação: '+err.message,true)).finally(()=>e.target.value='')};
  $('verifyLinks').onclick=verifyLinks;
+ $('verifyDuplicates').onclick=verifyDuplicates;
 }
 function categories(){
  for(const [id,label] of [['productCategoryFilter','Todas as categorias'],['bulkCategory','Selecione a categoria']]){
@@ -115,4 +116,36 @@ function verifyLinks(){
  }
  report('<strong>Verificação local:</strong> '+products.length+' produtos; '+issues.length+' alertas. Não confirma estoque ou disponibilidade na Shopee.'+(issues.length?'<div class="product-link-results">'+issues.slice(0,100).map(([p,reason])=>'<div>'+esc(p.name)+' — '+esc(reason)+' <button class="small-btn" data-tool-edit="'+esc(p.id)+'">Editar</button></div>').join('')+'</div>':'<p>Nenhum problema de formato encontrado.</p>'));
  $('toolReport').querySelectorAll('[data-tool-edit]').forEach(b=>b.onclick=()=>api.edit(b.dataset.toolEdit));
+}
+
+function verifyDuplicates(){
+ const byLink=new Map();
+ for(const p of api.products()){
+  const link=String(p.affiliateUrl||'').trim().toLowerCase();
+  if(!link)continue;
+  if(!byLink.has(link))byLink.set(link,[]);
+  byLink.get(link).push(p);
+ }
+ const groups=[...byLink.values()].filter(items=>items.length>1);
+ const ids=groups.reduce((n,items)=>n+items.length,0);
+ report('<strong>Verificação de duplicações:</strong> '+groups.length+' grupo(s), '+ids+' produto(s) com link de afiliado repetido.'+
+ (groups.length?'<div class="product-link-results">'+groups.map((group,i)=>
+ '<div class="duplicate-group"><strong>Grupo '+(i+1)+' — '+group.length+' produtos com o mesmo link</strong>'+
+ group.map(p=>'<div class="contact-row"><span><strong>'+esc(p.name||'Produto sem nome')+'</strong><br><small>ID: '+esc(p.id)+'</small></span>'+
+ '<span><button type="button" class="small-btn" data-dup-edit="'+esc(p.id)+'">Editar</button> '+
+ '<button type="button" class="small-btn danger" data-dup-delete="'+esc(p.id)+'">Excluir este</button></span></div>').join('')+'</div>'
+ ).join('')+'</div>':'<p>Nenhum link de afiliado duplicado encontrado.</p>'));
+ const area=$('toolReport');
+ area.onclick=async e=>{
+  const edit=e.target.closest('[data-dup-edit]'),del=e.target.closest('[data-dup-delete]');
+  if(edit){api.edit(edit.dataset.dupEdit);return}
+  if(!del||busy)return;
+  const id=del.dataset.dupDelete;
+  const product=api.products().find(p=>p.id===id);
+  if(!product||!confirm('Excluir SOMENTE este cadastro?\\n'+product.name+'\\nID: '+id+'\\nEsta ação não pode ser desfeita.'))return;
+  busy=true;del.disabled=true;del.textContent='Excluindo…';
+  try{await removeProduct(id);await api.refresh();verifyDuplicates();api.say('Cadastro duplicado excluído individualmente.')}
+  catch(error){console.error(error);api.say('Erro ao excluir produto. Tente novamente.',true);del.disabled=false;del.textContent='Excluir este'}
+  finally{busy=false}
+ };
 }
