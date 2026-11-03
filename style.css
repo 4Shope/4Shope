@@ -487,3 +487,7 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 .product-photo-dialog img{display:block;width:auto;max-width:100%;max-height:75dvh;margin:auto;object-fit:contain}
 .photo-dialog-close{position:absolute;right:8px;top:5px;font-size:30px;line-height:1;background:transparent;color:var(--ink);border:0;cursor:pointer}
 @media(max-width:540px){.affiliate-import-row{grid-template-columns:minmax(0,1fr) auto}.affiliate-import-row .btn{font-size:11px;padding:8px}.image-organizer .photo-preview-open img{height:90px}}
+
+/* Remoção individual acessível no canto de cada foto */
+.image-organizer .organize-photo button[data-image-move="remove"]{position:absolute;top:5px;right:5px;z-index:4;display:grid;place-items:center;width:27px;height:27px;min-width:27px;padding:0;border-radius:50%;background:#202020;color:#fff;border:1px solid #fff;font-size:19px;line-height:1;box-shadow:0 2px 8px #0005}
+.image-organizer .organize-photo{isolation:isolate}
