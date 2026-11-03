@@ -23,8 +23,7 @@ $('newProduct').onclick=()=>editProduct();$('cancelProduct').onclick=()=>$('prod
 }
 $('pImages').oninput=preview;
 $('imagePreview').onclick=e=>{
- const open=e.target.closest('[data-photo-open]');if(open){const urls=$('pImages').value.split('\
-').map(x=>x.trim()).filter(safeUrl);const url=urls[Number(open.dataset.photoOpen)];if(url){$('largeProductPhoto').src=url;$('productPhotoDialog').showModal()}return}
+ const open=e.target.closest('[data-photo-open]');if(open){const urls=$('pImages').value.split('\n').map(x=>x.trim()).filter(safeUrl);const url=urls[Number(open.dataset.photoOpen)];if(url){$('largeProductPhoto').src=url;$('productPhotoDialog').showModal()}return}
  const btn=e.target.closest('[data-image-move]');if(!btn)return;
  const urls=$('pImages').value.split('\n').map(x=>x.trim()).filter(Boolean);
  const i=Number(btn.dataset.imageIndex),action=btn.dataset.imageMove;
@@ -56,14 +55,14 @@ $('importShopee').onclick=async()=>{
   const pageUrl=String(data.url||'');
   const pageHost=(()=>{try{return new URL(pageUrl).hostname.toLowerCase()}catch{return ''}})();
   if(pageHost&&!pageHost.includes('shopee'))throw Error('O link redirecionou para uma página que não é da Shopee.');
-  const title=String(data.title||'').replace(/\\s*[|\\-]\\s*Shopee.*$/i,'').trim().slice(0,160);
+  const title=String(data.title||'').replace(/\s*[|-]\s*Shopee.*$/i,'').trim().slice(0,160);
   const desc=String(data.description||'').trim().slice(0,5000);
   const imageUrl=typeof data.image==='string'?data.image:data.image?.url;
   const usableImage=safeUrl(imageUrl||'');
   let count=0;
   if(title&&!/shopee brasil|ofertas imperdíveis|acesso negado|just a moment/i.test(title)&&!$('pName').value.trim()){$('pName').value=title;count++}
   if(desc&&!$('pDescription').value.trim()){$('pDescription').value=desc;count++}
-  if(usableImage&&!$('pImages').value.split('\\n').includes(usableImage)){$('pImages').value=[$('pImages').value.trim(),usableImage].filter(Boolean).join('\\n');count++}
+  if(usableImage&&!$('pImages').value.split('\n').includes(usableImage)){$('pImages').value=[$('pImages').value.trim(),usableImage].filter(Boolean).join('\n');count++}
   // Evita extrair preços incertos de anúncios, fretes ou textos promocionais.
   preview();saveProductDraft();
   status.textContent=count?'Importação parcial: '+count+' campo(s) preenchido(s). Confira título, imagem e descrição. Preço e galeria completa precisam de revisão manual.':'A página foi acessada, mas não trouxe novos dados de produto. Preencha manualmente.';
