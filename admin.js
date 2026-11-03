@@ -17,7 +17,20 @@ $('adminProductSearch').oninput=renderProducts;$('adminProductFilter').onchange=
 function previewProductDraft(){const name=$('pName').value.trim()||'Nome do produto',price=$('pPrice').value,desc=$('pDescription').value.trim(),url=$('pImages').value.split('\n').map(x=>x.trim()).find(safeUrl);const box=$('productAdminPreview');box.classList.remove('hidden');box.innerHTML=`<div class="draft-preview-card"><img src="${esc(safeUrl(url)||'product-placeholder.svg')}" alt="Prévia" onerror="this.src='product-placeholder.svg'"><div><small>PRÉVIA ANTES DE PUBLICAR</small><h3>${esc(name)}</h3>${price?`<p>A partir de <strong>${currency(Number(price))}</strong></p>`:'<p>Preço não informado</p>'}<p>${esc(desc.slice(0,240)||'Adicione uma descrição para apresentar melhor o produto.')}</p><span class="small-btn">Ver detalhes e comprar ↗</span></div></div>`}
 $('previewProductBtn').onclick=previewProductDraft;
 function editProduct(id){const p=products.find(p=>p.id===id);$('productEditor').classList.remove('hidden');$('productEditorTitle').textContent=p?'Editar produto':'Cadastrar produto';$('productForm').reset();$('productAdminPreview').classList.add('hidden');$('pId').value=p?.id||'';$('pName').value=p?.name||'';const selected=new Set(Array.isArray(p?.categories)&&p.categories.length?p.categories:(p?.category?[p.category]:[]));$('pCategories').querySelectorAll('input[type="checkbox"]').forEach(el=>el.checked=selected.has(el.value));$('pPrice').value=p?.price??'';$('pOldPrice').value=p?.oldPrice??'';$('pVideo').value=p?.videoUrl||'';$('pDescription').value=p?.description||'';$('pImages').value=(p?.images||[]).join('\n');$('pLink').value=p?.affiliateUrl||'';$('pBadge').value=p?.badge||'';$('pFeatured').checked=!!p?.featured;$('pPublished').checked=p?p.published!==false:true;$('pStart').value=p?.startAt||'';$('pEnd').value=p?.endAt||'';preview();$('productEditor').scrollIntoView({behavior:'smooth'})}
-$('newProduct').onclick=()=>editProduct();$('cancelProduct').onclick=()=>$('productEditor').classList.add('hidden');function preview(){const urls=$('pImages').value.split('\n').map(s=>s.trim()).filter(safeUrl).slice(0,8);$('imagePreview').innerHTML=urls.map(s=>`<img src="${esc(safeUrl(s))}" style="width:70px;height:70px;object-fit:cover;border-radius:7px" onerror="this.style.display='none'" alt="Prévia">`).join('')}$('pImages').oninput=preview;
+$('newProduct').onclick=()=>editProduct();$('cancelProduct').onclick=()=>$('productEditor').classList.add('hidden');function preview(){
+ const urls=$('pImages').value.split('\n').map(x=>x.trim()).filter(safeUrl);
+ $('imagePreview').innerHTML=urls.map((url,i)=>'<div class="organize-photo"><img src="'+esc(url)+'" alt="Foto '+(i+1)+'" loading="lazy" onerror="this.style.opacity=.25"><span>'+(i===0?'Capa':i+1)+'</span><div><button type="button" class="small-btn" data-image-move="up" data-image-index="'+i+'" '+(i===0?'disabled':'')+' aria-label="Subir foto">↑</button><button type="button" class="small-btn" data-image-move="down" data-image-index="'+i+'" '+(i===urls.length-1?'disabled':'')+' aria-label="Descer foto">↓</button><button type="button" class="small-btn danger" data-image-move="remove" data-image-index="'+i+'" aria-label="Remover foto">×</button></div></div>').join('');
+}
+$('pImages').oninput=preview;
+$('imagePreview').onclick=e=>{
+ const btn=e.target.closest('[data-image-move]');if(!btn)return;
+ const urls=$('pImages').value.split('\n').map(x=>x.trim()).filter(Boolean);
+ const i=Number(btn.dataset.imageIndex),action=btn.dataset.imageMove;
+ if(!Number.isInteger(i)||i<0||i>=urls.length)return;
+ if(action==='remove')urls.splice(i,1);
+ else{const j=i+(action==='up'?-1:1);if(j<0||j>=urls.length)return;[urls[i],urls[j]]=[urls[j],urls[i]]}
+ $('pImages').value=urls.join('\n');preview();saveProductDraft();
+};
 
 const draftKey='4shope-product-draft';
 const draftFields=['pId','pName','pPrice','pOldPrice','pLink','pImages','pDescription','pVideo','pBadge','pStart','pEnd'];
