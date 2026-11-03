@@ -467,3 +467,8 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
  #favoritos .cart-summary-actions{display:grid;grid-template-columns:1fr 1fr}
 }
 .product-card .product-share,.product-card [data-share-product]{display:none!important}
+
+/* Botão de explorar produtos: contraste correto em ambos os temas. */
+#favoritos a.cart-explore,#favoritos a.cart-explore:link,#favoritos a.cart-explore:visited{background:var(--ink);border-color:var(--ink);color:var(--bg)!important;-webkit-text-fill-color:var(--bg);opacity:1}
+#favoritos a.cart-explore:hover,#favoritos a.cart-explore:focus-visible{filter:brightness(.88);outline-offset:3px}
+[data-theme="dark"] #favoritos a.cart-explore{background:#f7f7f5;border-color:#f7f7f5;color:#101010!important;-webkit-text-fill-color:#101010}
