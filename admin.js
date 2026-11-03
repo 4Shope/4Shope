@@ -11,7 +11,7 @@ $('logoutBtn').onclick=()=>logout();
 function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Estatísticas e visitas',settings:'Minha loja',partners:'Parcerias',carousels:'Carrosséis',coupons:'Cupons'})[name]||'Painel'}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 document.querySelectorAll('.admin-quick-actions [data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
-async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));settings={...initialSettings,...(d.settings||{})};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;$('statDrafts').textContent=products.filter(p=>!p.published).length;$('statFeatured').textContent=products.filter(p=>p.featured).length;$('statMissingLinks').textContent=products.filter(p=>!safeUrl(p.affiliateUrl)).length;renderProducts();renderCategories();renderSettings();renderMarketing();renderPartners();renderCarousels();renderCoupons()}
+async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));settings={...initialSettings,...(d.settings||{})};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;$('statDrafts').textContent=products.filter(p=>!p.published).length;$('statFeatured').textContent=products.filter(p=>p.featured).length;$('statMissingLinks').textContent=products.filter(p=>!safeUrl(p.affiliateUrl)).length;renderProducts();renderCategories();renderSettings();renderMarketing();renderPartners();renderCarousels();renderCoupons();renderLayoutOrganizer()}
 function renderProducts(){const q=($('adminProductSearch').value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),filter=$('adminProductFilter').value;const visible=products.filter(p=>p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q)&&(filter==='all'||filter==='published'&&p.published||filter==='draft'&&!p.published||filter==='featured'&&p.featured||filter==='missing'&&!safeUrl(p.affiliateUrl)));$('adminProductCount').textContent=visible.length+' de '+products.length+' produtos';$('productRows').innerHTML=visible.length?visible.map(p=>`<tr><td><img class="table-thumb" src="${esc(safeUrl(p.images?.[0])||'product-placeholder.svg')}" onerror="this.src='product-placeholder.svg'" alt=""></td><td>${esc(p.name)}</td><td>${currency(p.price)}</td><td>${p.published?'Publicado':'Rascunho'}</td><td><button class="small-btn" data-view-p="${esc(p.id)}">Prévia</button><button class="small-btn" data-edit-p="${esc(p.id)}">Editar</button><button class="small-btn danger" data-del-p="${esc(p.id)}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto cadastrado ainda.</td></tr>';$('pCategories').innerHTML=categories.map(c=>`<label class="checkline"><input type="checkbox" name="productCategories" value="${esc(c.id)}"> ${esc(c.name)}</label>`).join('');renderAdminTools()}
 $('adminProductSearch').oninput=renderProducts;$('adminProductFilter').onchange=renderProducts;
 function previewProductDraft(){const name=$('pName').value.trim()||'Nome do produto',price=$('pPrice').value,desc=$('pDescription').value.trim(),url=$('pImages').value.split('\n').map(x=>x.trim()).find(safeUrl);const box=$('productAdminPreview');box.classList.remove('hidden');box.innerHTML=`<div class="draft-preview-card"><img src="${esc(safeUrl(url)||'product-placeholder.svg')}" alt="Prévia" onerror="this.src='product-placeholder.svg'"><div><small>PRÉVIA ANTES DE PUBLICAR</small><h3>${esc(name)}</h3>${price?`<p>A partir de <strong>${currency(Number(price))}</strong></p>`:'<p>Preço não informado</p>'}<p>${esc(desc.slice(0,240)||'Adicione uma descrição para apresentar melhor o produto.')}</p><span class="small-btn">Ver detalhes e comprar ↗</span></div></div>`}
@@ -350,3 +350,38 @@ $('couponRows').onclick=async e=>{
  if(del&&confirm('Excluir este cupom?')){await persistMarketing({coupons:(settings.coupons||[]).filter(x=>x.id!==del.dataset.delCoupon)});say('Cupom excluído.')}
 };
 $('clearCouponHistory').onclick=async()=>{if(!confirm('Excluir todo o histórico de resgates confirmados? Os totais utilizados serão preservados.'))return;await persistMarketing({couponHistory:[]});say('Histórico apagado.')};
+
+/* Organizador de marketing: todos os formatos no mesmo painel. */
+const layoutKinds=[['marketingBanners','Banner'],['campaigns','Campanha'],['carousels','Carrossel'],['partners','Parceria']];
+const layoutPlaces={top:'Início · topo',aboveProducts:'Início · antes dos produtos',mid:'Início · meio',bottom:'Início · final',catalogTop:'Catálogo · topo',categoriesTop:'Categorias · topo',detailTop:'Produto · topo',product:'Catálogo',categories:'Categorias',detail:'Produto'};
+function normalizedPlacement(place){return place==='hero'?'top':place||'bottom'}
+function layoutItems(place){
+ return layoutKinds.flatMap(([key,label])=>(settings[key]||[]).filter(x=>normalizedPlacement(x.placement)===place).map(x=>({...x,kind:key,label}))).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+}
+function renderLayoutOrganizer(){
+ const host=$('layoutOrganizer');if(!host)return;
+ const place=$('layoutArea').value;
+ const items=layoutItems(place);
+ host.innerHTML=items.length?items.map((item,i)=>'<div class="layout-item"><span class="layout-item-title"><b>'+esc(item.name||item.title||item.label)+' </b><small>'+esc(item.label)+'</small></span><span class="layout-item-tools"><button class="small-btn" type="button" data-layout-dir="up" data-layout-kind="'+esc(item.kind)+'" data-layout-id="'+esc(item.id)+'" '+(i===0?'disabled':'')+' aria-label="Subir">↑</button><button class="small-btn" type="button" data-layout-dir="down" data-layout-kind="'+esc(item.kind)+'" data-layout-id="'+esc(item.id)+'" '+(i===items.length-1?'disabled':'')+' aria-label="Descer">↓</button><select class="field" data-layout-move="'+esc(item.kind)+'" data-layout-id="'+esc(item.id)+'" aria-label="Mover para outra posição">'+Object.entries(layoutPlaces).map(([value,label])=>'<option value="'+value+'" '+(value===place?'selected':'')+'>'+esc(label)+'</option>').join('')+'</select></span></div>').join(''):'<p class="admin-hint">Nenhuma divulgação nesta posição.</p>';
+}
+$('layoutArea').onchange=renderLayoutOrganizer;
+$('layoutOrganizer').onclick=async e=>{
+ const button=e.target.closest('[data-layout-dir]');if(!button)return;
+ const place=$('layoutArea').value,items=layoutItems(place);
+ const i=items.findIndex(x=>x.kind===button.dataset.layoutKind&&x.id===button.dataset.layoutId);
+ const j=i+(button.dataset.layoutDir==='up'?-1:1);
+ if(i<0||j<0||j>=items.length)return;
+ [items[i],items[j]]=[items[j],items[i]];
+ const patch={};for(const [key] of layoutKinds)patch[key]=[...(settings[key]||[])];
+ items.forEach((item,k)=>{patch[item.kind]=patch[item.kind].map(x=>x.id===item.id?{...x,placement:place,order:(k+1)*10}:x)});
+ button.disabled=true;
+ try{await persistMarketing(patch);say('Ordem atualizada.')}catch(err){console.error(err);say('Não foi possível reorganizar.',true);renderLayoutOrganizer()}
+};
+$('layoutOrganizer').onchange=async e=>{
+ const select=e.target.closest('[data-layout-move]');if(!select)return;
+ const key=select.dataset.layoutMove,id=select.dataset.layoutId,place=select.value;
+ const item=(settings[key]||[]).find(x=>x.id===id);if(!item)return;
+ const patch={[key]:(settings[key]||[]).map(x=>x.id===id?{...x,placement:place,order:(layoutItems(place).length+1)*10}:x)};
+ select.disabled=true;
+ try{await persistMarketing(patch);say('Posição atualizada.')}catch(err){console.error(err);say('Erro ao mover divulgação.',true);renderLayoutOrganizer()}
+};
