@@ -412,3 +412,6 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
  .product-card .cart-add{font-size:11px;padding:5px}
  .cart-summary-top{display:grid}
 }
+
+.cart-buy-direct{display:flex;align-items:center;justify-content:center;min-height:42px;border-radius:9px;margin-top:9px;background:var(--ink);color:var(--surface);font-size:12px;font-weight:750;text-align:center;padding:9px;text-decoration:none}
+.cart-buy-direct:hover{opacity:.86}
