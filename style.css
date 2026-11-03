@@ -453,3 +453,17 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
  #favoritos .cart-buy-direct,#favoritos .cart-remove{width:100%;text-align:center;min-height:38px}
  #favoritos .cart-summary-actions>*{flex:1}
 }
+
+/* Correções mobile carrinho e contador - novembro 2026 */
+.mobile-bottom-nav a[data-nav="favoritos"]{position:relative;overflow:visible}
+#cartBadge{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:20px;width:auto;height:20px;line-height:1;padding:0 5px;white-space:nowrap;font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;border-radius:999px;background:var(--ink);color:var(--surface);text-align:center;vertical-align:middle}
+#cartBadge[hidden]{display:none!important}
+@media(max-width:650px){
+ .mobile-bottom-nav a[data-nav="favoritos"]{padding-right:8px}
+ #cartBadge{position:absolute;top:0;right:8%;transform:translate(4px,-20%);min-width:20px;height:20px;padding:0 5px;z-index:2;box-shadow:0 0 0 2px var(--surface)}
+ #favoritos .cart-items .product-card{overflow:visible}
+ #favoritos .cart-items .product-info{overflow-wrap:anywhere}
+ #favoritos .cart-items .cart-item-actions{gap:7px}
+ #favoritos .cart-summary-actions{display:grid;grid-template-columns:1fr 1fr}
+}
+.product-card .product-share,.product-card [data-share-product]{display:none!important}
