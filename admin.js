@@ -121,7 +121,7 @@ function analyticsPeriod(){
  return [from.getTime(),now.getTime()];
 }
 let lastAnalytics=[];let rankingCache={view:[],buy:[]};
-function rankingList(type){return rankingCache[type].slice(0,10).map((item,i)=>`<div class="rank-row"><span class="rank-number">${i+1}</span><span>${esc(products.find(p=>p.id===item.id)?.name||'Produto indisponível')}</span><strong>${item.count}</strong></div>`).join('')||'<p class="admin-hint">Sem dados neste período.</p>'}
+function rankingList(type){const rows=rankingCache[type].slice(0,8),max=Math.max(1,...rows.map(x=>x.count));return rows.map((item,i)=>`<div class="rank-row rank-visual"><span class="rank-number">${i+1}</span><div class="rank-visual-body"><span>${esc(products.find(p=>p.id===item.id)?.name||'Produto indisponível')}</span><div class="rank-track"><i style="width:${Math.max(3,100*item.count/max).toFixed(1)}%"></i></div></div><strong>${item.count.toLocaleString('pt-BR')}</strong></div>`).join('')||'<p class="admin-hint">Sem dados neste período.</p>'}
 $('publishPopular').onclick=async()=>{if(!rankingCache.view.length&&!rankingCache.buy.length){say('Atualize as estatísticas antes de publicar.',true);return}if(!confirm('Atualizar a vitrine Em alta com os rankings deste período?'))return;try{await saveSettings({...settings,popularSnapshot:{view:rankingCache.view.slice(0,8).map(x=>x.id),buy:rankingCache.buy.slice(0,8).map(x=>x.id),updatedAt:Date.now()}});await refresh();$('popularPublishStatus').textContent='Ranking publicado na loja.';say('Ranking publicado com sucesso.')}catch(e){console.error(e);say('Não foi possível publicar o ranking.',true)}};
 function selectedStatMonths(){
  const now=new Date(),count={week:1,month:1,semester:6,year:12}[$('analyticsPeriod').value]||1;
@@ -143,8 +143,8 @@ async function refreshAnalytics(){
   $('rankingViews').innerHTML=rankingList('view');$('rankingBuys').innerHTML=rankingList('buy');
   $('metricViews').textContent=views.toLocaleString('pt-BR');
   $('metricBuys').textContent=buys.toLocaleString('pt-BR');
-  $('popularPublishStatus').textContent='Período: '+$('analyticsPeriod').selectedOptions[0].textContent+'. Publique para atualizar a vitrine.';
-  $('analyticsStatus').textContent=stats.length+' contadores mensais, '+views+' acessos e '+buys+' cliques em Comprar. Histórico antigo não incluído.';
+  $('popularPublishStatus').textContent='Ranking pronto para publicar.';
+  $('analyticsStatus').textContent='Atualizado · '+stats.length+' registros mensais';
  }catch(e){console.error(e);$('analyticsStatus').textContent='Erro ao ler contadores. Verifique as regras do Firebase.'}
 }
 // Preferencias locais deste navegador administrativo, sem gravacoes adicionais no Firestore.
