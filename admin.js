@@ -36,40 +36,6 @@ $('imagePreview').onclick=e=>{
 
 $('closeProductPhoto').onclick=()=>$('productPhotoDialog').close();
 $('productPhotoDialog').onclick=e=>{if(e.target===$('productPhotoDialog'))$('productPhotoDialog').close()};
-$('importShopee').onclick=async()=>{
- const button=$('importShopee'),status=$('importShopeeStatus'),raw=$('pLink').value.trim();
- let url;try{url=new URL(raw)}catch{status.textContent='Cole um link válido da Shopee.';return}
- const host=url.hostname.toLowerCase();
- if(url.protocol!=='https:'||!(host==='shopee.com.br'||host.endsWith('.shopee.com.br')||host==='shope.ee')){status.textContent='Use um link HTTPS da Shopee brasileira.';return}
- button.disabled=true;button.textContent='Buscando…';status.textContent='Consultando os metadados públicos da página…';
- try{
-  // Serviço público de metadados. Não usa credenciais nem contorna autenticação.
-  const endpoint='https://api.microlink.io?'+new URLSearchParams({url:url.href});
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
-  let response;
-  try{response=await fetch(endpoint,{signal:controller.signal})}finally{clearTimeout(timer)}
-  if(!response.ok)throw Error(response.status===429?'Limite gratuito de consultas atingido.':'Não foi possível consultar esta página.');
-  const payload=await response.json();
-  if(payload.status!=='success'||!payload.data)throw Error('A Shopee não liberou informações para importação.');
-  const data=payload.data;
-  const pageUrl=String(data.url||'');
-  const pageHost=(()=>{try{return new URL(pageUrl).hostname.toLowerCase()}catch{return ''}})();
-  if(pageHost&&!pageHost.includes('shopee'))throw Error('O link redirecionou para uma página que não é da Shopee.');
-  const title=String(data.title||'').replace(/\s*[|-]\s*Shopee.*$/i,'').trim().slice(0,160);
-  const desc=String(data.description||'').trim().slice(0,5000);
-  const imageUrl=typeof data.image==='string'?data.image:data.image?.url;
-  const usableImage=safeUrl(imageUrl||'');
-  let count=0;
-  if(title&&!/shopee brasil|ofertas imperdíveis|acesso negado|just a moment/i.test(title)&&!$('pName').value.trim()){$('pName').value=title;count++}
-  if(desc&&!$('pDescription').value.trim()){$('pDescription').value=desc;count++}
-  if(usableImage&&!$('pImages').value.split('\n').includes(usableImage)){$('pImages').value=[$('pImages').value.trim(),usableImage].filter(Boolean).join('\n');count++}
-  // Evita extrair preços incertos de anúncios, fretes ou textos promocionais.
-  preview();saveProductDraft();
-  status.textContent=count?'Importação parcial: '+count+' campo(s) preenchido(s). Confira título, imagem e descrição. Preço e galeria completa precisam de revisão manual.':'A página foi acessada, mas não trouxe novos dados de produto. Preencha manualmente.';
- }catch(error){status.textContent='Não foi possível importar automaticamente: '+(error.name==='AbortError'?'tempo de resposta esgotado':error.message)+'. Você ainda pode cadastrar normalmente pelo link.'}
- finally{button.disabled=false;button.textContent='✦ Puxar dados'}
-};
-
 const draftKey='4shope-product-draft';
 const draftFields=['pId','pName','pPrice','pOldPrice','pLink','pImages','pDescription','pVideo','pBadge','pStart','pEnd'];
 let draftTimer;
