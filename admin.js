@@ -19,10 +19,12 @@ $('previewProductBtn').onclick=previewProductDraft;
 function editProduct(id){const p=products.find(p=>p.id===id);$('productEditor').classList.remove('hidden');$('productEditorTitle').textContent=p?'Editar produto':'Cadastrar produto';$('productForm').reset();$('productAdminPreview').classList.add('hidden');$('pId').value=p?.id||'';$('pName').value=p?.name||'';const selected=new Set(Array.isArray(p?.categories)&&p.categories.length?p.categories:(p?.category?[p.category]:[]));$('pCategories').querySelectorAll('input[type="checkbox"]').forEach(el=>el.checked=selected.has(el.value));$('pPrice').value=p?.price??'';$('pOldPrice').value=p?.oldPrice??'';$('pVideo').value=p?.videoUrl||'';$('pDescription').value=p?.description||'';$('pImages').value=(p?.images||[]).join('\n');$('pLink').value=p?.affiliateUrl||'';$('pBadge').value=p?.badge||'';$('pFeatured').checked=!!p?.featured;$('pPublished').checked=p?p.published!==false:true;$('pStart').value=p?.startAt||'';$('pEnd').value=p?.endAt||'';preview();$('productEditor').scrollIntoView({behavior:'smooth'})}
 $('newProduct').onclick=()=>editProduct();$('cancelProduct').onclick=()=>$('productEditor').classList.add('hidden');function preview(){
  const urls=$('pImages').value.split('\n').map(x=>x.trim()).filter(safeUrl);
- $('imagePreview').innerHTML=urls.map((url,i)=>'<div class="organize-photo"><img src="'+esc(url)+'" alt="Foto '+(i+1)+'" loading="lazy" onerror="this.style.opacity=.25"><span>'+(i===0?'Capa':i+1)+'</span><div><button type="button" class="small-btn" data-image-move="up" data-image-index="'+i+'" '+(i===0?'disabled':'')+' aria-label="Subir foto">↑</button><button type="button" class="small-btn" data-image-move="down" data-image-index="'+i+'" '+(i===urls.length-1?'disabled':'')+' aria-label="Descer foto">↓</button><button type="button" class="small-btn danger" data-image-move="remove" data-image-index="'+i+'" aria-label="Remover foto">×</button></div></div>').join('');
+ $('imagePreview').innerHTML=urls.map((url,i)=>'<div class="organize-photo"><button type="button" class="photo-preview-open" data-photo-open="'+i+'" aria-label="Ampliar foto '+(i+1)+'"><img src="'+esc(url)+'" alt="Foto '+(i+1)+'" loading="lazy" onerror="this.style.opacity=.25"></button><span>'+(i===0?'Capa':i+1)+'</span><div><button type="button" class="small-btn" data-image-move="up" data-image-index="'+i+'" '+(i===0?'disabled':'')+' aria-label="Subir foto">↑</button><button type="button" class="small-btn" data-image-move="down" data-image-index="'+i+'" '+(i===urls.length-1?'disabled':'')+' aria-label="Descer foto">↓</button><button type="button" class="small-btn danger" data-image-move="remove" data-image-index="'+i+'" aria-label="Remover foto">×</button></div></div>').join('');
 }
 $('pImages').oninput=preview;
 $('imagePreview').onclick=e=>{
+ const open=e.target.closest('[data-photo-open]');if(open){const urls=$('pImages').value.split('\
+').map(x=>x.trim()).filter(safeUrl);const url=urls[Number(open.dataset.photoOpen)];if(url){$('largeProductPhoto').src=url;$('productPhotoDialog').showModal()}return}
  const btn=e.target.closest('[data-image-move]');if(!btn)return;
  const urls=$('pImages').value.split('\n').map(x=>x.trim()).filter(Boolean);
  const i=Number(btn.dataset.imageIndex),action=btn.dataset.imageMove;
@@ -30,6 +32,43 @@ $('imagePreview').onclick=e=>{
  if(action==='remove')urls.splice(i,1);
  else{const j=i+(action==='up'?-1:1);if(j<0||j>=urls.length)return;[urls[i],urls[j]]=[urls[j],urls[i]]}
  $('pImages').value=urls.join('\n');preview();saveProductDraft();
+};
+
+
+$('closeProductPhoto').onclick=()=>$('productPhotoDialog').close();
+$('productPhotoDialog').onclick=e=>{if(e.target===$('productPhotoDialog'))$('productPhotoDialog').close()};
+$('importShopee').onclick=async()=>{
+ const button=$('importShopee'),status=$('importShopeeStatus'),raw=$('pLink').value.trim();
+ let url;try{url=new URL(raw)}catch{status.textContent='Cole um link válido da Shopee.';return}
+ const host=url.hostname.toLowerCase();
+ if(url.protocol!=='https:'||!(host==='shopee.com.br'||host.endsWith('.shopee.com.br')||host==='shope.ee')){status.textContent='Use um link HTTPS da Shopee brasileira.';return}
+ button.disabled=true;button.textContent='Buscando…';status.textContent='Consultando os metadados públicos da página…';
+ try{
+  // Serviço público de metadados. Não usa credenciais nem contorna autenticação.
+  const endpoint='https://api.microlink.io?'+new URLSearchParams({url:url.href});
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+  let response;
+  try{response=await fetch(endpoint,{signal:controller.signal})}finally{clearTimeout(timer)}
+  if(!response.ok)throw Error(response.status===429?'Limite gratuito de consultas atingido.':'Não foi possível consultar esta página.');
+  const payload=await response.json();
+  if(payload.status!=='success'||!payload.data)throw Error('A Shopee não liberou informações para importação.');
+  const data=payload.data;
+  const pageUrl=String(data.url||'');
+  const pageHost=(()=>{try{return new URL(pageUrl).hostname.toLowerCase()}catch{return ''}})();
+  if(pageHost&&!pageHost.includes('shopee'))throw Error('O link redirecionou para uma página que não é da Shopee.');
+  const title=String(data.title||'').replace(/\\s*[|\\-]\\s*Shopee.*$/i,'').trim().slice(0,160);
+  const desc=String(data.description||'').trim().slice(0,5000);
+  const imageUrl=typeof data.image==='string'?data.image:data.image?.url;
+  const usableImage=safeUrl(imageUrl||'');
+  let count=0;
+  if(title&&!/shopee brasil|ofertas imperdíveis|acesso negado|just a moment/i.test(title)&&!$('pName').value.trim()){$('pName').value=title;count++}
+  if(desc&&!$('pDescription').value.trim()){$('pDescription').value=desc;count++}
+  if(usableImage&&!$('pImages').value.split('\\n').includes(usableImage)){$('pImages').value=[$('pImages').value.trim(),usableImage].filter(Boolean).join('\\n');count++}
+  // Evita extrair preços incertos de anúncios, fretes ou textos promocionais.
+  preview();saveProductDraft();
+  status.textContent=count?'Importação parcial: '+count+' campo(s) preenchido(s). Confira título, imagem e descrição. Preço e galeria completa precisam de revisão manual.':'A página foi acessada, mas não trouxe novos dados de produto. Preencha manualmente.';
+ }catch(error){status.textContent='Não foi possível importar automaticamente: '+(error.name==='AbortError'?'tempo de resposta esgotado':error.message)+'. Você ainda pode cadastrar normalmente pelo link.'}
+ finally{button.disabled=false;button.textContent='✦ Puxar dados'}
 };
 
 const draftKey='4shope-product-draft';
