@@ -215,7 +215,7 @@ $('searchForm').onsubmit=e=>{e.preventDefault();suggestions.hidden=true;term=$('
  if(configured){
   try{
    const data=await loadPublic();
-   products=data.products;
+   products=data.products.filter(p=>{const now=new Date().toISOString().slice(0,16);return (!p.startAt||p.startAt<=now)&&(!p.endAt||p.endAt>=now)});
    categories=data.categories.length?data.categories.sort((a,b)=>(a.order||0)-(b.order||0)):initialCategories;
    settings={...initialSettings,...(data.settings||{})};
   }catch(e){
