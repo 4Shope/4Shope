@@ -360,7 +360,7 @@ function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&
 
 
 // Música ambiente por gêneros: suporta YouTube e áudio direto.
-function youtubeVideoId(value){const v=String(value||'').trim();if(/^[A-Za-z0-9_-]{11}$/.test(v))return v;try{const u=new URL(v);if(!/^https?:$/.test(u.protocol))return '';if(/(^|\.)youtu\.be$/i.test(u.hostname))return u.pathname.split('/').filter(Boolean)[0]||'';if(/(^|\.)youtube\.com$/i.test(u.hostname)||/(^|\.)youtube-nocookie\.com$/i.test(u.hostname)){if(u.pathname==='/watch')return u.searchParams.get('v')||'';return u.pathname.match(/^\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{11})/)?.[1]||''}}catch{}return ''}
+function youtubeVideoId(value){const v=String(value||'').trim();if(/^[A-Za-z0-9_-]{11}$/.test(v))return v;return v.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/i)?.[1]||''}
 function setupStoreMusic(){
  const cfg=settings.storeMusic||{},menuButton=$('storeMusicMenuToggle'),bar=$('storeMusicBar'),audio=$('storeMusicAudio'),genreSelect=$('storeMusicGenre'),panelToggle=$('musicPanelToggle'),panel=$('musicPanelContent');if(!menuButton||!bar||!audio||cfg.enabled!==true)return;
  panelToggle?.addEventListener('click',()=>{const open=panelToggle.getAttribute('aria-expanded')!=='true';panelToggle.setAttribute('aria-expanded',String(open));panel.hidden=!open});
