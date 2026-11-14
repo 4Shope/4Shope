@@ -178,6 +178,7 @@ function connectCoupon(p){
   const dest=couponWhatsapp(p,selected,name,phone);
   if(!dest||!buy){feedback.textContent='WhatsApp indisponível. Fale com a 4Shope.';return}
   buy.href=dest;buy.removeAttribute('data-buy-product');
+  const mobileBuy=$('productDetail').querySelector('.detail-mobile-buy-button');if(mobileBuy){mobileBuy.href=dest;mobileBuy.removeAttribute('data-buy-product');mobileBuy.querySelector('strong').textContent='Resgatar Promoção';mobileBuy.querySelector('small').textContent='Solicitar pelo WhatsApp';}
   buy.querySelector('strong').textContent='Resgatar Promoção';
   buy.querySelector('small').textContent='Solicitar pelo WhatsApp';
   identity.hidden=true;applied.hidden=false;feedback.textContent='';
