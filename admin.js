@@ -102,56 +102,28 @@ $('igPostRows').onclick=e=>{if(e.target.closest('[data-remove-ig]')){e.target.cl
 $('jumpToBanners').onclick=()=>document.getElementById('marketingBannerRows').closest('.admin-card').scrollIntoView({behavior:'smooth',block:'start'});
 
 
-function parseMusicYouTubeId(raw){
- const value=String(raw||'').trim();
- if(/^[A-Za-z0-9_-]{11}$/.test(value))return value;
- try{const u=new URL(value);if(u.protocol!=='https:')return '';const host=u.hostname.toLowerCase();if(!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com','youtu.be','www.youtu.be'].includes(host))return '';const parts=u.pathname.split('/').filter(Boolean);let id='';if(host.includes('youtu.be'))id=parts[0]||'';else id=u.searchParams.get('v')||(['shorts','embed','live'].includes(parts[0])?parts[1]:'')||'';return /^[A-Za-z0-9_-]{11}$/.test(id)?id:''}catch{return ''}
-}
+function isDirectAudioUrl(value){const url=safeUrl(value);if(!url)return false;try{return /\.(mp3|m4a|aac|ogg|oga|wav|flac|opus)$/i.test(new URL(url).pathname)}catch{return false}}
 function renderMusicRows(){
  const rows=$('musicTrackRows');
- rows.innerHTML=musicDraft.length?musicDraft.map((t,i)=>'<article class="music-admin-row" data-music-index="'+i+'"><div class="music-admin-row-main"><strong>'+(i+1)+'. '+esc(t.title||('Vídeo do YouTube '+(i+1)))+'</strong><small>'+esc(t.url||('ID: '+t.id))+'</small><label class="checkline"><input type="checkbox" data-music-active="'+i+'" '+(t.active===false?'':'checked')+'> Incluir na reprodução</label></div><div class="music-admin-actions"><button type="button" class="small-btn" data-music-move="up" data-music-index="'+i+'" '+(i===0?'disabled':'')+'>↑</button><button type="button" class="small-btn" data-music-move="down" data-music-index="'+i+'" '+(i===musicDraft.length-1?'disabled':'')+'>↓</button><button type="button" class="small-btn danger" data-music-remove="'+i+'">Excluir</button></div></article>').join(''):'<div class="music-admin-empty">Sua playlist ainda está vazia. Adicione os links das músicas que deseja tocar.</div>';
+ rows.innerHTML=musicDraft.length?musicDraft.map((t,i)=>'<article class="music-admin-row" data-music-index="'+i+'"><div class="music-admin-row-main"><strong>'+(i+1)+'. '+esc(t.title||('Faixa '+(i+1)))+'</strong><small>'+esc(t.url)+'</small><label class="checkline"><input type="checkbox" data-music-active="'+i+'" '+(t.active===false?'':'checked')+'> Incluir na reprodução</label></div><div class="music-admin-actions"><button type="button" class="small-btn" data-music-move="up" data-music-index="'+i+'" '+(i===0?'disabled':'')+'>↑</button><button type="button" class="small-btn" data-music-move="down" data-music-index="'+i+'" '+(i===musicDraft.length-1?'disabled':'')+'>↓</button><button type="button" class="small-btn danger" data-music-remove="'+i+'">Excluir</button></div></article>').join(''):'<div class="music-admin-empty">Sua playlist ainda está vazia. Adicione URLs diretas de arquivos de áudio.</div>';
 }
 function renderMusic(){
- const cfg=settings.storeMusic||initialSettings.storeMusic||{enabled:false,tracks:[]};
- $('musicEnabled').checked=cfg.enabled===true;$('musicTitle').value=cfg.title||'Trilha sonora da 4Shope';$('musicDescription').value=cfg.description||'';
- musicDraft=Array.isArray(cfg.tracks)?cfg.tracks.map(t=>{const id=parseMusicYouTubeId(t.url)||parseMusicYouTubeId(t.id);return id?{...t,id}:null}).filter(Boolean):[];
- $('musicSaveStatus').textContent='';
- renderMusicRows();
+ const cfg=settings.storeMusic||initialSettings.storeMusic||{enabled:false,tracks:[]};$('musicEnabled').checked=cfg.enabled===true;$('musicTitle').value=cfg.title||'Trilha sonora da 4Shope';$('musicDescription').value=cfg.description||'Explore a loja no seu ritmo, com uma trilha sonora para acompanhar cada descoberta.';
+ musicDraft=Array.isArray(cfg.tracks)?cfg.tracks.filter(t=>t&&isDirectAudioUrl(t.url)).map(t=>({...t})):[];$('musicSaveStatus').textContent='';renderMusicRows();
 }
 $('addMusicTrack').onclick=()=>{
- const url=$('musicTrackUrl').value.trim(),id=parseMusicYouTubeId(url);
- if(!id){say('Link não reconhecido. Use um vídeo público do YouTube: youtube.com/watch, youtu.be, Shorts ou link /embed.',true);return}
- if(musicDraft.some(t=>t.id===id)){say('Esse vídeo já está na playlist.',true);return}
- musicDraft.push({id,url,title:$('musicTrackName').value.trim()||'Faixa '+(musicDraft.length+1),active:true});
- $('musicTrackUrl').value='';$('musicTrackName').value='';
- renderMusicRows();
- $('musicSaveStatus').textContent='Faixa adicionada à lista. Não esqueça de salvar as configurações.';
- say('Faixa adicionada à lista. Agora clique em Salvar configurações.');
+ const url=$('musicTrackUrl').value.trim();if(!isDirectAudioUrl(url)){say('Informe uma URL HTTPS direta para um arquivo MP3, M4A, AAC, OGG ou WAV. Links do YouTube/Spotify não funcionam aqui.',true);return}
+ if(musicDraft.some(t=>t.url===safeUrl(url))){say('Esse áudio já está na playlist.',true);return}
+ musicDraft.push({url:safeUrl(url),title:$('musicTrackName').value.trim()||'Faixa '+(musicDraft.length+1),active:true});$('musicTrackUrl').value='';$('musicTrackName').value='';renderMusicRows();$('musicSaveStatus').textContent='Faixa adicionada à lista. Não esqueça de salvar.';say('Faixa adicionada à lista.');
 };
-$('musicTrackRows').onclick=e=>{
- const remove=e.target.closest('[data-music-remove]'),move=e.target.closest('[data-music-move]');
- if(remove){musicDraft.splice(Number(remove.dataset.musicRemove),1);renderMusicRows();return}
- if(move){const i=Number(move.dataset.musicIndex),j=i+(move.dataset.musicMove==='up'?-1:1);if(j<0||j>=musicDraft.length)return;[musicDraft[i],musicDraft[j]]=[musicDraft[j],musicDraft[i]];renderMusicRows()}
-};
+$('musicTrackRows').onclick=e=>{const remove=e.target.closest('[data-music-remove]'),move=e.target.closest('[data-music-move]');if(remove){musicDraft.splice(Number(remove.dataset.musicRemove),1);renderMusicRows();return}if(move){const i=Number(move.dataset.musicIndex),j=i+(move.dataset.musicMove==='up'?-1:1);if(j<0||j>=musicDraft.length)return;[musicDraft[i],musicDraft[j]]=[musicDraft[j],musicDraft[i]];renderMusicRows()}};
 $('musicTrackRows').onchange=e=>{const el=e.target.closest('[data-music-active]');if(el&&musicDraft[Number(el.dataset.musicActive)])musicDraft[Number(el.dataset.musicActive)].active=el.checked};
 let musicSaveInProgress=false;
 $('saveMusicSettings').onclick=async()=>{
- if(musicSaveInProgress)return;
- const active=musicDraft.filter(t=>t.active!==false);
- if($('musicEnabled').checked&&!active.length){say('Adicione e habilite pelo menos uma faixa antes de ativar a música na loja.',true);$('musicSaveStatus').textContent='Não foi salvo: a playlist precisa ter ao menos uma faixa ativa.';return}
- const storeMusic={enabled:$('musicEnabled').checked,title:$('musicTitle').value.trim()||'Trilha sonora da 4Shope',description:$('musicDescription').value.trim(),tracks:musicDraft.map(t=>({...t,id:parseMusicYouTubeId(t.url)||parseMusicYouTubeId(t.id)}))};
+ if(musicSaveInProgress)return;const active=musicDraft.filter(t=>t.active!==false);if($('musicEnabled').checked&&!active.length){say('Adicione e habilite pelo menos uma faixa antes de ativar a música na loja.',true);$('musicSaveStatus').textContent='Não foi salvo: a playlist precisa ter ao menos uma faixa ativa.';return}
+ const storeMusic={enabled:$('musicEnabled').checked,title:$('musicTitle').value.trim()||'Trilha sonora da 4Shope',description:$('musicDescription').value.trim()||'Explore a loja no seu ritmo, com uma trilha sonora para acompanhar cada descoberta.',tracks:musicDraft.map(t=>({...t,url:safeUrl(t.url)}))};
  const btn=$('saveMusicSettings');musicSaveInProgress=true;btn.disabled=true;btn.textContent='Salvando…';$('musicSaveStatus').textContent='Gravando no Firebase…';
- try{
-  await saveSettings({...settings,storeMusic});
-  settings={...settings,storeMusic};
-  $('musicSaveStatus').textContent='Salvo no Firebase com sucesso.';
-  say('Configurações da música salvas.');
- }catch(err){
-  console.error('Falha ao salvar música ambiente:',err);
-  const detail=err?.code||err?.message||'erro desconhecido';
-  $('musicSaveStatus').textContent='Falha ao salvar: '+detail;
-  say('Não foi possível salvar a playlist: '+detail,true);
- }finally{musicSaveInProgress=false;btn.disabled=false;btn.textContent='Salvar configurações da música ↗'}
+ try{await saveSettings({...settings,storeMusic});settings={...settings,storeMusic};$('musicSaveStatus').textContent='Salvo no Firebase com sucesso.';say('Configurações da música salvas.')}catch(err){console.error('Falha ao salvar música ambiente:',err);const detail=err?.code||err?.message||'erro desconhecido';$('musicSaveStatus').textContent='Falha ao salvar: '+detail;say('Não foi possível salvar a playlist: '+detail,true)}finally{musicSaveInProgress=false;btn.disabled=false;btn.textContent='Salvar configurações da música ↗'}
 };
 
 function whatsappDigits(v){let d=String(v||'').replace(/\D/g,'');return d.startsWith('55')&&d.length>=12?d.slice(2):d}
