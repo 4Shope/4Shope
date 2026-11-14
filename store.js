@@ -362,8 +362,9 @@ function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&
 // Música ambiente por gêneros: suporta YouTube e áudio direto.
 function youtubeVideoId(value){const v=String(value||'').trim();if(/^[A-Za-z0-9_-]{11}$/.test(v))return v;return v.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/i)?.[1]||''}
 function setupStoreMusic(){
- const cfg=settings.storeMusic||{},menuButton=$('storeMusicMenuToggle'),bar=$('storeMusicBar'),audio=$('storeMusicAudio'),genreSelect=$('storeMusicGenre'),panelToggle=$('musicPanelToggle'),panel=$('musicPanelContent');if(!menuButton||!bar||!audio||cfg.enabled!==true)return;
+ const cfg=settings.storeMusic||{},menuButton=$('storeMusicMenuToggle'),bar=$('storeMusicBar'),audio=$('storeMusicAudio'),genreSelect=$('storeMusicGenre'),panelToggle=$('musicPanelToggle'),panel=$('musicPanelContent');if(!menuButton||!bar||!audio)return;
  panelToggle?.addEventListener('click',()=>{const open=panelToggle.getAttribute('aria-expanded')!=='true';panelToggle.setAttribute('aria-expanded',String(open));panel.hidden=!open});
+ if(cfg.enabled!==true){menuButton.disabled=true;menuButton.textContent='Música indisponível';return}
  let genres=Array.isArray(cfg.genres)?cfg.genres.map(g=>({...g,tracks:(Array.isArray(g.tracks)?g.tracks:[]).filter(t=>t&&(youtubeVideoId(t.youtubeId||t.url||t.id)||safeUrl(t.url))&&t.active!==false)})).filter(g=>g.tracks.length):[];
  if(!genres.length&&Array.isArray(cfg.tracks)&&cfg.tracks.length)genres=[{id:'geral',name:'Geral',tracks:cfg.tracks.filter(t=>t&&(youtubeVideoId(t.youtubeId||t.url||t.id)||safeUrl(t.url))&&t.active!==false)}].filter(g=>g.tracks.length);
  if(!genres.length)return;genreSelect.innerHTML=genres.map((g,i)=>'<option value="'+i+'">'+esc(g.name)+'</option>').join('');
