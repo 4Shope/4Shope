@@ -359,28 +359,17 @@ function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&
 })();
 
 
-// Música ambiente opcional da loja. Só inicia após ação explícita do visitante.
+// Música ambiente opcional: arquivos de áudio diretos, sem player de vídeo ou anúncios do YouTube.
+function isDirectAudioUrl(value){const url=safeUrl(value);if(!url)return false;try{return /\.(mp3|m4a|aac|ogg|oga|wav|flac|opus)$/i.test(new URL(url).pathname)}catch{return false}}
 function setupStoreMusic(){
- const cfg=settings.storeMusic||{},tracks=Array.isArray(cfg.tracks)?cfg.tracks.filter(t=>t&&t.active!==false&&/^[A-Za-z0-9_-]{11}$/.test(String(t.id||''))):[];
- const widget=$('storeMusicWidget');if(!widget||cfg.enabled!==true||!tracks.length)return;
- const toggle=$('storeMusicToggle'),panel=$('storeMusicPanel'),player=$('storeMusicPlayer');
- $('storeMusicTitle').textContent=cfg.title||'Trilha sonora da 4Shope';
- $('storeMusicDescription').textContent=cfg.description||'Uma trilha leve para acompanhar suas descobertas.';
- widget.hidden=false;
- let playing=false;
- const stop=()=>{player.replaceChildren();panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.querySelector('small').textContent='Ative a trilha sonora';playing=false};
- const start=()=>{
-  if(playing)return;
-  const ids=tracks.map(t=>t.id),first=ids[0],playlist=encodeURIComponent(ids.join(','));
-  const frame=document.createElement('iframe');
-  frame.title='Música ambiente da 4Shope — player do YouTube';
-  frame.width='200';frame.height='200';frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
-  frame.referrerPolicy='strict-origin-when-cross-origin';
-  frame.allowFullscreen=true;
-  frame.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(first)+'?autoplay=1&controls=1&playsinline=1&rel=0&loop=1&playlist='+playlist;
-  player.replaceChildren(frame);panel.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.querySelector('small').textContent='Trilha ativada';playing=true;
- };
- toggle.addEventListener('click',()=>{if(!playing)start();else{panel.hidden=false;toggle.setAttribute('aria-expanded','true')}});
- $('storeMusicOff').addEventListener('click',stop);
- $('storeMusicClose').addEventListener('click',stop);
+ const cfg=settings.storeMusic||{},tracks=Array.isArray(cfg.tracks)?cfg.tracks.filter(t=>t&&t.active!==false&&isDirectAudioUrl(t.url)):[];
+ const menuButton=$('storeMusicMenuToggle'),bar=$('storeMusicBar'),audio=$('storeMusicAudio');if(!menuButton||!bar||!audio||cfg.enabled!==true||!tracks.length)return;
+ const title=$('storeMusicTrackTitle'),status=$('storeMusicStatus'),play=$('storeMusicPlay');let current=0,enabled=false;
+ const updateMenu=()=>{menuButton.textContent=enabled?'Desativar música ×':'Ativar música ♫';menuButton.setAttribute('aria-pressed',String(enabled))};
+ const stop=()=>{audio.pause();audio.removeAttribute('src');audio.load();enabled=false;bar.hidden=true;status.textContent='Música desligada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música');updateMenu()};
+ const loadTrack=async(index,autoplay=true)=>{current=(index+tracks.length)%tracks.length;const track=tracks[current];if(!track)return;audio.src=track.url;title.textContent=track.title||'Trilha sonora da 4Shope';bar.hidden=false;if(autoplay){try{await audio.play();enabled=true;status.textContent='Tocando agora';play.textContent='Ⅱ';play.setAttribute('aria-label','Pausar música')}catch(err){enabled=false;status.textContent='Toque em reproduzir para iniciar';play.textContent='▶'}updateMenu()}};
+ menuButton.addEventListener('click',()=>{if(enabled){stop();return}enabled=true;updateMenu();if(!audio.src)loadTrack(current,true);else audio.play().then(()=>{status.textContent='Tocando agora';play.textContent='Ⅱ';updateMenu()}).catch(()=>{enabled=false;status.textContent='Toque em reproduzir para iniciar';updateMenu()})});
+ play.addEventListener('click',()=>{if(audio.paused){audio.play().then(()=>{enabled=true;status.textContent='Tocando agora';play.textContent='Ⅱ';play.setAttribute('aria-label','Pausar música');updateMenu()}).catch(()=>{status.textContent='Não foi possível reproduzir este áudio'})}else{audio.pause();status.textContent='Música pausada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música')}});
+ $('storeMusicNext').addEventListener('click',()=>loadTrack(current+1,true));$('storeMusicPrev').addEventListener('click',()=>loadTrack(current-1,true));$('storeMusicStop').addEventListener('click',stop);
+ audio.addEventListener('ended',()=>loadTrack(current+1,true));audio.addEventListener('error',()=>{status.textContent='Não foi possível carregar esta faixa';enabled=false;play.textContent='▶';updateMenu()});updateMenu();
 }
