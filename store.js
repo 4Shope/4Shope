@@ -346,3 +346,13 @@ function renderMarketing(){ $('marketingCampaigns').innerHTML='';for(const id of
 function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&marketingVisible(x));if(!c){$('campaignDetail').innerHTML=empty('Esta campanha não está disponível.');return}const chosen=products.filter(p=>(c.productIds||[]).includes(p.id)||(c.categoryIds||[]).some(id=>productCategoryIds(p).includes(id)));$('campaignDetail').innerHTML=`<div class="page-heading"><div class="section-kicker">CAMPANHA 4SHOPE</div>${c.name?`<h1>${esc(c.name)}</h1>`:''}${c.description?`<p>${esc(c.description)}</p>`:''}</div>${safeUrl(c.image)?`<div class="campaign-cover">${image(c.image,c.name||"Campanha 4Shope")}</div>`:''}<div class="campaign-share"><button id="shareCampaign" class="small-btn">Compartilhar campanha ↗</button></div><div class="product-grid">${chosen.length?chosen.map(productCard).join(''):empty('Em breve, novos produtos nesta campanha.')}</div>`;const btn=$('shareCampaign');btn.onclick=()=>{const u=location.href;if(navigator.share)navigator.share({title:c.name,url:u}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(u).then(()=>toast('Link copiado!')).catch(()=>toast('Copie o endereço desta página.'));else toast('Copie o endereço desta página.')} }
 
 // Métricas agregáveis sem identificador de visitante, cookies analíticos ou armazenamento de rastreamento.
+
+
+// Menu principal compacto (hambúrguer), com fechamento ao navegar ou tocar fora.
+(()=>{const btn=$('siteMenuToggle'),menu=$('siteMenu');if(!btn||!menu)return;
+ const close=()=>{menu.classList.remove('menu-open');btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Abrir menu');document.body.classList.remove('site-menu-visible')};
+ btn.addEventListener('click',()=>{const open=!menu.classList.contains('menu-open');menu.classList.toggle('menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.setAttribute('aria-label',open?'Fechar menu':'Abrir menu');document.body.classList.toggle('site-menu-visible',open)});
+ menu.addEventListener('click',e=>{if(e.target.closest('a'))close()});
+ document.addEventListener('click',e=>{if(menu.classList.contains('menu-open')&&!menu.contains(e.target)&&!btn.contains(e.target))close()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+})();
