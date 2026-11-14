@@ -369,7 +369,7 @@ function setupStoreMusic(){
  const list=()=>genres[gi]?.tracks||[],shuffle=a=>{const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]]}return x};
  const newQueue=()=>{const last=played.length?played[played.length-1]:-1;queue=shuffle(list().map((_,i)=>i));if(queue.length>1&&queue[0]===last)[queue[0],queue[1]]=[queue[1],queue[0]];played=[]};
  const update=()=>{menuButton.textContent=enabled?'Desativar música ×':'Ativar música ♫';menuButton.setAttribute('aria-pressed',String(enabled))};
- const stop=()=>{audio.pause();audio.removeAttribute('src');audio.load();enabled=false;bar.hidden=true;status.textContent='Música desligada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música');update()};
+ const stop=()=>{audio.pause();audio.removeAttribute('src');audio.load();enabled=false;current=-1;queue=[];played=[];bar.hidden=true;status.textContent='Música desligada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música');update()};
  const playTrack=async i=>{const t=list()[i];if(!t)return;current=i;audio.src=t.url;title.textContent=t.title||'Trilha sonora da 4Shope';bar.hidden=false;try{await audio.play();enabled=true;status.textContent='Tocando · '+genres[gi].name;play.textContent='Ⅱ';play.setAttribute('aria-label','Pausar música')}catch(e){enabled=false;status.textContent='Toque em reproduzir para iniciar';play.textContent='▶'}update()};
  const next=()=>{if(!queue.length)newQueue();const i=queue.shift();if(i!==undefined){played.push(i);playTrack(i)}};
  const prev=()=>{if(played.length>1){played.pop();const i=played.pop();queue.unshift(current);played.push(i);playTrack(i)}else{newQueue();next()}};
