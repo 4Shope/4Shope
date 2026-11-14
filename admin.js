@@ -451,3 +451,13 @@ $('publicationResults').onclick=e=>{
  else if(b.dataset.publicationTab==='partners')editPartner(id);
  else if(b.dataset.publicationTab==='coupons')editCoupon(id);
 };
+
+
+// Menu lateral responsivo do painel administrativo.
+(()=>{const btn=$('adminMenuToggle'),side=$('adminSidebar'),shell=document.querySelector('.admin-shell');if(!btn||!side||!shell)return;
+ const close=()=>{shell.classList.remove('admin-menu-open');btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Abrir menu administrativo')};
+ btn.addEventListener('click',()=>{const open=!shell.classList.contains('admin-menu-open');shell.classList.toggle('admin-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.setAttribute('aria-label',open?'Fechar menu administrativo':'Abrir menu administrativo')});
+ side.addEventListener('click',e=>{if(e.target.closest('[data-tab]')||e.target.closest('#logoutBtn'))close()});
+ document.addEventListener('click',e=>{if(shell.classList.contains('admin-menu-open')&&!side.contains(e.target)&&!btn.contains(e.target))close()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+})();
