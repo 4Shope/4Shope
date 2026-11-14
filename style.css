@@ -552,3 +552,51 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 #imagePreview .organize-photo-tools .small-btn{min-width:0;min-height:36px;padding:6px 4px;font-size:11px}
 #imagePreview .organize-photo-tools .small-btn:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:480px){#imagePreview.image-organizer{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#imagePreview .organize-photo{padding:7px}#imagePreview .photo-preview-open{height:105px;min-height:105px}}
+
+
+/* Menu hambúrguer da loja: navegação completa, compacta e acessível */
+.menu-toggle,.admin-menu-toggle{display:none;align-items:center;justify-content:center;flex-direction:column;gap:5px;width:42px;height:42px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);cursor:pointer}
+.menu-toggle span,.admin-menu-toggle span{display:block;width:19px;height:2px;border-radius:2px;background:currentColor;transition:transform .2s,opacity .2s}
+.menu-toggle[aria-expanded="true"] span:first-child,.admin-menu-toggle[aria-expanded="true"] span:first-child{transform:translateY(7px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2),.admin-menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:last-child,.admin-menu-toggle[aria-expanded="true"] span:last-child{transform:translateY(-7px) rotate(-45deg)}
+@media(max-width:760px){
+ .header-main{min-height:70px;gap:12px}
+ .brand{width:112px}
+ .brand .logo{width:110px}
+ .header-actions{gap:8px;margin-left:0}
+ .menu-toggle{display:flex;flex:0 0 42px}
+ .desktop-nav{display:none;position:absolute;top:100%;left:0;right:0;width:100%;height:auto;margin:0;padding:12px 18px 18px;background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);box-shadow:0 16px 28px #0002;z-index:30;flex-direction:column;align-items:stretch;gap:3px}
+ .desktop-nav.menu-open{display:flex}
+ .desktop-nav a{min-height:46px;height:auto;padding:0 12px;border:0;border-radius:9px;font-size:14px}
+ .desktop-nav a.active,.desktop-nav a:hover{background:var(--soft);color:var(--ink)}
+ .search{height:40px;min-width:0;padding-left:10px}
+ .search input{font-size:11px;padding:0 7px}
+ .search button{padding:9px 10px;font-size:10px}
+ .search svg{width:16px;height:16px}
+}
+/* Painel: menu lateral vira gaveta no celular, sem perder nenhuma seção */
+@media(max-width:760px){
+ .admin-shell{display:block;min-height:100vh}
+ .admin-menu-toggle{display:flex;flex:0 0 42px}
+ .admin-top{justify-content:flex-start;align-items:center;gap:12px;margin-bottom:24px}
+ .admin-top>div{flex:1;min-width:0}
+ .admin-top h1{font-size:23px}
+ .admin-top>.small-btn{flex:0 0 auto}
+ .admin-main{padding:18px 14px 35px}
+ .admin-sidebar{position:fixed;z-index:121;left:0;top:0;bottom:0;width:min(82vw,310px);height:100dvh;overflow-y:auto;padding:24px 18px;transform:translateX(-105%);transition:transform .25s ease;box-shadow:12px 0 35px #0004}
+ .admin-menu-open .admin-sidebar{transform:translateX(0)}
+ .admin-shell.admin-menu-open:before{content:"";position:fixed;inset:0;background:#0008;z-index:120}
+ .admin-menu-open .admin-menu-toggle{position:relative;z-index:122}
+ .admin-menu-open .admin-sidebar button{min-height:46px}
+ .admin-menu-open .admin-sidebar .admin-exit{margin-top:20px}
+}
+@media(max-width:420px){
+ .header-main{gap:7px}
+ .brand{width:90px}
+ .brand .logo{width:88px}
+ .header-actions{gap:5px}
+ .menu-toggle{width:38px;height:40px;flex-basis:38px}
+ .icon-btn{width:28px}
+ .search button{display:none}
+}
