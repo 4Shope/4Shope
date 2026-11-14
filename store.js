@@ -250,6 +250,7 @@ $('searchForm').onsubmit=e=>{e.preventDefault();suggestions.hidden=true;term=$('
  render();
  $('cartBadge').textContent=favs.size;$('cartBadge').hidden=!favs.size;
  navigate(true);
+ setupStoreMusic();
 })();
 
 /* Banners e campanhas editáveis no painel. */
@@ -356,3 +357,30 @@ function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&
  document.addEventListener('click',e=>{if(menu.classList.contains('menu-open')&&!menu.contains(e.target)&&!btn.contains(e.target))close()});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 })();
+
+
+// Música ambiente opcional da loja. Só inicia após ação explícita do visitante.
+function setupStoreMusic(){
+ const cfg=settings.storeMusic||{},tracks=Array.isArray(cfg.tracks)?cfg.tracks.filter(t=>t&&t.active!==false&&/^[A-Za-z0-9_-]{11}$/.test(String(t.id||''))):[];
+ const widget=$('storeMusicWidget');if(!widget||cfg.enabled!==true||!tracks.length)return;
+ const toggle=$('storeMusicToggle'),panel=$('storeMusicPanel'),player=$('storeMusicPlayer');
+ $('storeMusicTitle').textContent=cfg.title||'Trilha sonora da 4Shope';
+ $('storeMusicDescription').textContent=cfg.description||'Uma trilha leve para acompanhar suas descobertas.';
+ widget.hidden=false;
+ let playing=false;
+ const stop=()=>{player.replaceChildren();panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.querySelector('small').textContent='Ative a trilha sonora';playing=false};
+ const start=()=>{
+  if(playing)return;
+  const ids=tracks.map(t=>t.id),first=ids[0],playlist=encodeURIComponent(ids.join(','));
+  const frame=document.createElement('iframe');
+  frame.title='Música ambiente da 4Shope — player do YouTube';
+  frame.width='200';frame.height='200';frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+  frame.referrerPolicy='strict-origin-when-cross-origin';
+  frame.allowFullscreen=true;
+  frame.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(first)+'?autoplay=1&controls=1&playsinline=1&rel=0&loop=1&playlist='+playlist;
+  player.replaceChildren(frame);panel.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.querySelector('small').textContent='Trilha ativada';playing=true;
+ };
+ toggle.addEventListener('click',()=>{if(!playing)start();else{panel.hidden=false;toggle.setAttribute('aria-expanded','true')}});
+ $('storeMusicOff').addEventListener('click',stop);
+ $('storeMusicClose').addEventListener('click',stop);
+}
