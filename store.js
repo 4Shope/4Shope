@@ -359,17 +359,22 @@ function renderCampaign(id){const c=(settings.campaigns||[]).find(x=>x.id===id&&
 })();
 
 
-// Música ambiente opcional: arquivos de áudio diretos, sem player de vídeo ou anúncios do YouTube.
-function isDirectAudioUrl(value){const url=safeUrl(value);if(!url)return false;try{return /\.(mp3|m4a|aac|ogg|oga|wav|flac|opus)$/i.test(new URL(url).pathname)}catch{return false}}
+// Música ambiente por gêneros: sorteio sem repetição até completar a playlist.
 function setupStoreMusic(){
- const cfg=settings.storeMusic||{},tracks=Array.isArray(cfg.tracks)?cfg.tracks.filter(t=>t&&t.active!==false&&isDirectAudioUrl(t.url)):[];
- const menuButton=$('storeMusicMenuToggle'),bar=$('storeMusicBar'),audio=$('storeMusicAudio');if(!menuButton||!bar||!audio||cfg.enabled!==true||!tracks.length)return;
- const title=$('storeMusicTrackTitle'),status=$('storeMusicStatus'),play=$('storeMusicPlay');let current=0,enabled=false;
- const updateMenu=()=>{menuButton.textContent=enabled?'Desativar música ×':'Ativar música ♫';menuButton.setAttribute('aria-pressed',String(enabled))};
- const stop=()=>{audio.pause();audio.removeAttribute('src');audio.load();enabled=false;bar.hidden=true;status.textContent='Música desligada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música');updateMenu()};
- const loadTrack=async(index,autoplay=true)=>{current=(index+tracks.length)%tracks.length;const track=tracks[current];if(!track)return;audio.src=track.url;title.textContent=track.title||'Trilha sonora da 4Shope';bar.hidden=false;if(autoplay){try{await audio.play();enabled=true;status.textContent='Tocando agora';play.textContent='Ⅱ';play.setAttribute('aria-label','Pausar música')}catch(err){enabled=false;status.textContent='Toque em reproduzir para iniciar';play.textContent='▶'}updateMenu()}};
- menuButton.addEventListener('click',()=>{if(enabled){stop();return}enabled=true;updateMenu();if(!audio.src)loadTrack(current,true);else audio.play().then(()=>{status.textContent='Tocando agora';play.textContent='Ⅱ';updateMenu()}).catch(()=>{enabled=false;status.textContent='Toque em reproduzir para iniciar';updateMenu()})});
- play.addEventListener('click',()=>{if(audio.paused){audio.play().then(()=>{enabled=true;status.textContent='Tocando agora';play.textContent='Ⅱ';play.setAttribute('aria-label','Pausar música');updateMenu()}).catch(()=>{status.textContent='Não foi possível reproduzir este áudio'})}else{audio.pause();status.textContent='Música pausada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música')}});
- $('storeMusicNext').addEventListener('click',()=>loadTrack(current+1,true));$('storeMusicPrev').addEventListener('click',()=>loadTrack(current-1,true));$('storeMusicStop').addEventListener('click',stop);
- audio.addEventListener('ended',()=>loadTrack(current+1,true));audio.addEventListener('error',()=>{status.textContent='Não foi possível carregar esta faixa';enabled=false;play.textContent='▶';updateMenu()});updateMenu();
+ const cfg=settings.storeMusic||{},menuButton=$('storeMusicMenuToggle'),bar=$('storeMusicBar'),audio=$('storeMusicAudio'),genreSelect=$('storeMusicGenre');if(!menuButton||!bar||!audio||cfg.enabled!==true)return;
+ let genres=Array.isArray(cfg.genres)?cfg.genres.map(g=>({...g,tracks:(Array.isArray(g.tracks)?g.tracks:[]).filter(t=>t&&safeUrl(t.url)&&t.active!==false)})).filter(g=>g.tracks.length):[];
+ if(!genres.length&&Array.isArray(cfg.tracks)&&cfg.tracks.length)genres=[{id:'geral',name:'Geral',tracks:cfg.tracks.filter(t=>t&&safeUrl(t.url)&&t.active!==false)}].filter(g=>g.tracks.length);
+ if(!genres.length)return;genreSelect.innerHTML=genres.map((g,i)=>'<option value="'+i+'">'+esc(g.name)+'</option>').join('');
+ const title=$('storeMusicTrackTitle'),status=$('storeMusicStatus'),play=$('storeMusicPlay');let gi=0,queue=[],played=[],current=-1,enabled=false;
+ const list=()=>genres[gi]?.tracks||[],shuffle=a=>{const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]]}return x};
+ const newQueue=()=>{const last=played.length?played[played.length-1]:-1;queue=shuffle(list().map((_,i)=>i));if(queue.length>1&&queue[0]===last)[queue[0],queue[1]]=[queue[1],queue[0]];played=[]};
+ const update=()=>{menuButton.textContent=enabled?'Desativar música ×':'Ativar música ♫';menuButton.setAttribute('aria-pressed',String(enabled))};
+ const stop=()=>{audio.pause();audio.removeAttribute('src');audio.load();enabled=false;bar.hidden=true;status.textContent='Música desligada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música');update()};
+ const playTrack=async i=>{const t=list()[i];if(!t)return;current=i;audio.src=t.url;title.textContent=t.title||'Trilha sonora da 4Shope';bar.hidden=false;try{await audio.play();enabled=true;status.textContent='Tocando · '+genres[gi].name;play.textContent='Ⅱ';play.setAttribute('aria-label','Pausar música')}catch(e){enabled=false;status.textContent='Toque em reproduzir para iniciar';play.textContent='▶'}update()};
+ const next=()=>{if(!queue.length)newQueue();const i=queue.shift();if(i!==undefined){played.push(i);playTrack(i)}};
+ const prev=()=>{if(played.length>1){played.pop();const i=played.pop();queue.unshift(current);played.push(i);playTrack(i)}else{newQueue();next()}};
+ menuButton.addEventListener('click',()=>{if(enabled){stop();return}if(current<0){newQueue();next()}else audio.play().then(()=>{enabled=true;status.textContent='Tocando · '+genres[gi].name;update()}).catch(()=>{status.textContent='Toque em reproduzir para iniciar'})});
+ genreSelect.addEventListener('change',()=>{gi=Number(genreSelect.value)||0;queue=[];played=[];current=-1;if(enabled){newQueue();next()}});
+ play.addEventListener('click',()=>{if(audio.paused)audio.play().then(()=>{enabled=true;status.textContent='Tocando · '+genres[gi].name;play.textContent='Ⅱ';update()}).catch(()=>status.textContent='Não foi possível reproduzir este áudio');else{audio.pause();status.textContent='Música pausada';play.textContent='▶';play.setAttribute('aria-label','Reproduzir música')}});
+ $('storeMusicNext').addEventListener('click',next);$('storeMusicPrev').addEventListener('click',prev);$('storeMusicStop').addEventListener('click',stop);audio.addEventListener('ended',next);audio.addEventListener('error',()=>{status.textContent='Não foi possível carregar esta faixa';enabled=false;play.textContent='▶';update()});update();
 }
