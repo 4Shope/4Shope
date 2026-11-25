@@ -11,6 +11,25 @@ $('logoutBtn').onclick=()=>logout();
 function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.admin-section').forEach(s=>s.classList.toggle('active',s.id==='tab-'+name));$('adminTitle').textContent=({dashboard:'Visão geral',products:'Produtos',categories:'Categorias',marketing:'Marketing e campanhas',analytics:'Estatísticas e visitas',settings:'Minha loja',partners:'Parcerias',carousels:'Carrosséis',coupons:'Cupons'})[name]||'Painel'}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 document.querySelectorAll('.admin-quick-actions [data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
+
+/* Tema visual independente do tema escolhido para a loja. */
+(()=>{
+ const btn=$('adminThemeToggle'),root=document.documentElement,key='4shope-admin-theme';
+ if(!btn)return;
+ const apply=theme=>{
+  const dark=theme==='dark';
+  root.dataset.theme=dark?'dark':'light';
+  btn.textContent=dark?'☀ Tema claro':'☾ Tema escuro';
+  btn.setAttribute('aria-label',dark?'Ativar tema claro':'Ativar tema escuro');
+  btn.setAttribute('aria-pressed',String(dark));
+ };
+ let saved='light';try{saved=localStorage.getItem(key)==='dark'?'dark':'light'}catch{}
+ apply(saved);
+ btn.addEventListener('click',()=>{
+  const next=root.dataset.theme==='dark'?'light':'dark';
+  apply(next);try{localStorage.setItem(key,next)}catch{}
+ });
+})();
 async function refresh(){const d=await loadAdmin();products=d.products;categories=d.categories.sort((a,b)=>(a.order||0)-(b.order||0));const storedSettings={...(d.settings||{})};if(Object.prototype.hasOwnProperty.call(storedSettings,'storeMusic')){delete storedSettings.storeMusic;await saveSettings({...initialSettings,...storedSettings})}settings={...initialSettings,...storedSettings};$('statProducts').textContent=products.length;$('statPublished').textContent=products.filter(p=>p.published).length;$('statCategories').textContent=categories.length;$('statDrafts').textContent=products.filter(p=>!p.published).length;$('statFeatured').textContent=products.filter(p=>p.featured).length;$('statMissingLinks').textContent=products.filter(p=>!safeUrl(p.affiliateUrl)).length;renderProducts();renderCategories();renderSettings();renderMarketing();renderPartners();renderCarousels();renderCoupons();renderLayoutOrganizer();renderPublicationCenter()}
 function renderProducts(){const q=($('adminProductSearch').value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),filter=$('adminProductFilter').value;const visible=products.filter(p=>p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q)&&(filter==='all'||filter==='published'&&p.published||filter==='draft'&&!p.published||filter==='featured'&&p.featured||filter==='missing'&&!safeUrl(p.affiliateUrl)));$('adminProductCount').textContent=visible.length+' de '+products.length+' produtos';$('productRows').innerHTML=visible.length?visible.map(p=>`<tr><td><img class="table-thumb" src="${esc(safeUrl(p.images?.[0])||'product-placeholder.svg')}" onerror="this.src='product-placeholder.svg'" alt=""></td><td>${esc(p.name)}</td><td>${currency(p.price)}</td><td>${p.published?'Publicado':'Rascunho'}</td><td><button class="small-btn" data-view-p="${esc(p.id)}">Prévia</button><button class="small-btn" data-edit-p="${esc(p.id)}">Editar</button><button class="small-btn danger" data-del-p="${esc(p.id)}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto cadastrado ainda.</td></tr>';$('pCategories').innerHTML=categories.map(c=>`<label class="checkline"><input type="checkbox" name="productCategories" value="${esc(c.id)}"> ${esc(c.name)}</label>`).join('');renderAdminTools()}
 $('adminProductSearch').oninput=renderProducts;$('adminProductFilter').onchange=renderProducts;
