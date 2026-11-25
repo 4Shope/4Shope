@@ -474,10 +474,30 @@ $('publicationResults').onclick=e=>{
 
 
 // Menu lateral responsivo do painel administrativo.
-(()=>{const btn=$('adminMenuToggle'),side=$('adminSidebar'),shell=document.querySelector('.admin-shell');if(!btn||!side||!shell)return;
- const close=()=>{shell.classList.remove('admin-menu-open');btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Abrir menu administrativo')};
- btn.addEventListener('click',()=>{const open=!shell.classList.contains('admin-menu-open');shell.classList.toggle('admin-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.setAttribute('aria-label',open?'Fechar menu administrativo':'Abrir menu administrativo')});
+(()=>{
+ const btn=$('adminMenuToggle'),closeBtn=$('adminSidebarClose'),side=$('adminSidebar'),shell=document.querySelector('.admin-shell');
+ if(!btn||!side||!shell)return;
+ let previousOverflow='';
+ const close=()=>{
+  if(!shell.classList.contains('admin-menu-open'))return;
+  shell.classList.remove('admin-menu-open');
+  document.body.classList.remove('admin-drawer-open');
+  document.body.style.overflow=previousOverflow;
+  btn.setAttribute('aria-expanded','false');
+  btn.setAttribute('aria-label','Abrir menu administrativo');
+ };
+ const open=()=>{
+  previousOverflow=document.body.style.overflow;
+  shell.classList.add('admin-menu-open');
+  document.body.classList.add('admin-drawer-open');
+  document.body.style.overflow='hidden';
+  btn.setAttribute('aria-expanded','true');
+  btn.setAttribute('aria-label','Menu aberto');
+  closeBtn?.focus({preventScroll:true});
+ };
+ btn.addEventListener('click',()=>shell.classList.contains('admin-menu-open')?close():open());
+ closeBtn?.addEventListener('click',close);
  side.addEventListener('click',e=>{if(e.target.closest('[data-tab]')||e.target.closest('#logoutBtn'))close()});
- document.addEventListener('click',e=>{if(shell.classList.contains('admin-menu-open')&&!side.contains(e.target)&&!btn.contains(e.target))close()});
+ shell.addEventListener('click',e=>{if(shell.classList.contains('admin-menu-open')&&e.target===shell)close()});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 })();
