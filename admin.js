@@ -477,20 +477,22 @@ $('publicationResults').onclick=e=>{
 (()=>{
  const btn=$('adminMenuToggle'),closeBtn=$('adminSidebarClose'),side=$('adminSidebar'),shell=document.querySelector('.admin-shell');
  if(!btn||!side||!shell)return;
- let previousOverflow='';
+ let previousOverflow='',previousScrollY=0;
  const close=()=>{
   if(!shell.classList.contains('admin-menu-open'))return;
   shell.classList.remove('admin-menu-open');
   document.body.classList.remove('admin-drawer-open');
   document.body.style.overflow=previousOverflow;
+  document.body.style.position='';document.body.style.top='';document.body.style.width='';
+  window.scrollTo(0,previousScrollY);
   btn.setAttribute('aria-expanded','false');
   btn.setAttribute('aria-label','Abrir menu administrativo');
  };
  const open=()=>{
-  previousOverflow=document.body.style.overflow;
+  previousOverflow=document.body.style.overflow;previousScrollY=window.scrollY;
   shell.classList.add('admin-menu-open');
   document.body.classList.add('admin-drawer-open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.top=`-${previousScrollY}px`;document.body.style.width='100%';
   btn.setAttribute('aria-expanded','true');
   btn.setAttribute('aria-label','Menu aberto');
   closeBtn?.focus({preventScroll:true});
