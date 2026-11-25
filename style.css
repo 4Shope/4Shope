@@ -605,3 +605,23 @@ body img{ -webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-
 /* Player compacto da trilha sonora: só aparece após ativação no menu. */
 
 
+
+/* Painel administrativo: navegação móvel em coluna e temas completos */
+.admin-theme-toggle{white-space:nowrap;min-height:38px;font-weight:750}
+.admin-body{background:var(--bg);color:var(--ink);transition:background .2s,color .2s}
+.admin-sidebar{background:#171717;color:#fff}
+.admin-sidebar button{color:#c5c5c5}
+.admin-sidebar button.active,.admin-sidebar button:hover{background:#333;color:#fff}
+[data-theme="dark"] .admin-body{background:var(--bg);color:var(--ink)}
+[data-theme="dark"] .admin-sidebar{background:#080808;border-right:1px solid #303030}
+[data-theme="dark"] .admin-card,[data-theme="dark"] .stat-card,[data-theme="dark"] .login-card{background:var(--surface);border-color:var(--line);color:var(--ink)}
+[data-theme="dark"] .admin-sidebar button.active,[data-theme="dark"] .admin-sidebar button:hover{background:#303030;color:#fff}
+[data-theme="dark"] .admin-menu-toggle{background:var(--surface);border-color:var(--line);color:var(--ink)}
+@media(max-width:760px){
+ .admin-sidebar{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:5px;overflow-y:auto;overflow-x:hidden;white-space:normal}
+ .admin-sidebar .logo{flex:none;margin:0 0 8px}
+ .admin-sidebar button{display:block;flex:0 0 auto;width:100%;min-height:46px;text-align:left;padding:12px 14px;margin:0}
+ .admin-sidebar .admin-exit{margin-top:18px}
+ .admin-top{flex-wrap:wrap}
+ .admin-theme-toggle{font-size:10px;padding:8px}
+}
